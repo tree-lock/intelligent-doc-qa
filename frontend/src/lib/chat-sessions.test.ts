@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { testDocuments } from "../test/fixtures";
 import {
-  NEW_CHAT_ID,
+  type ChatSession,
   createChatId,
   loadSessions,
+  NEW_CHAT_ID,
   saveSessions,
   sortSessionsByUpdatedAtDesc,
-  type ChatSession,
 } from "./chat-sessions";
 
 describe("chat-sessions", () => {

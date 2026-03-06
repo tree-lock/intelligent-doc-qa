@@ -1,5 +1,5 @@
-import { SettingsField } from "./settings-field";
 import { SYSTEM_SETTINGS_LIMITS } from "../../lib/system-settings";
+import { SettingsField } from "./settings-field";
 
 type ParametersSectionProps = {
   maxTokens: number;

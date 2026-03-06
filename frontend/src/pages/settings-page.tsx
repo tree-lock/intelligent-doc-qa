@@ -1,8 +1,8 @@
-import { Button } from "../components/ui/button";
-import { ModelSourceSection } from "../components/settings/model-source-section";
 import { BuiltinModelSection } from "../components/settings/builtin-model-section";
 import { CustomModelSection } from "../components/settings/custom-model-section";
+import { ModelSourceSection } from "../components/settings/model-source-section";
 import { ParametersSection } from "../components/settings/parameters-section";
+import { Button } from "../components/ui/button";
 import { useSystemSettings } from "../hooks/use-system-settings";
 
 export function SettingsPage() {

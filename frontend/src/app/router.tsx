@@ -1,9 +1,9 @@
-import App from "../App";
 import {
+  createBrowserRouter,
   Navigate,
   RouterProvider,
-  createBrowserRouter,
 } from "react-router-dom";
+import App from "../App";
 import { ChatRoutePage } from "../pages/chat-route-page";
 import { DocumentsRoutePage } from "../pages/documents-route-page";
 import { SettingsRoutePage } from "../pages/settings-route-page";

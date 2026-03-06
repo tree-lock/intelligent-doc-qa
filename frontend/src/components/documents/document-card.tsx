@@ -1,6 +1,6 @@
-import { type DocumentItem } from "../../types";
 import { statusClass, statusText } from "../../lib/document-status";
 import { cn } from "../../lib/utils";
+import type { DocumentItem } from "../../types";
 
 type DocumentCardProps = {
   doc: DocumentItem;

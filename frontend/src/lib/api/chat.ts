@@ -1,4 +1,4 @@
-import { type DocumentItem } from "../../types";
+import type { DocumentItem } from "../../types";
 
 const MOCK_REQUEST_DELAY_MS = 900;
 

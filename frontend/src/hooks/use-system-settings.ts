@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
-  type SystemSettings,
-  SYSTEM_SETTINGS_LIMITS,
   DEFAULT_SYSTEM_SETTINGS,
+  SYSTEM_SETTINGS_LIMITS,
+  type SystemSettings,
 } from "../lib/system-settings";
 import {
   loadSystemSettings,

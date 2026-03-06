@@ -1,5 +1,5 @@
 import { APP_ROUTE_PATH } from "../app/route-config";
-import { NEW_CHAT_ID, type ChatSession } from "./chat-sessions";
+import { type ChatSession, NEW_CHAT_ID } from "./chat-sessions";
 
 export function resolveCurrentChatId(
   pathname: string,

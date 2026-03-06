@@ -1,6 +1,6 @@
-import { Button } from "../ui/button";
+import type { ModelSource } from "../../lib/system-settings";
 import { cn } from "../../lib/utils";
-import { type ModelSource } from "../../lib/system-settings";
+import { Button } from "../ui/button";
 
 const MODEL_SOURCES: Array<{ key: ModelSource; label: string }> = [
   { key: "builtin", label: "系统内置模型" },

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_SYSTEM_SETTINGS } from "./system-settings";
 import {
-  SYSTEM_SETTINGS_STORAGE_KEY,
   loadSystemSettings,
-  saveSystemSettings,
+  SYSTEM_SETTINGS_STORAGE_KEY,
   sanitizeSystemSettings,
+  saveSystemSettings,
 } from "./system-settings-storage";
 
 describe("system-settings-storage", () => {

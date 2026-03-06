@@ -1,13 +1,13 @@
 import { Suspense, useState } from "react";
-import { type ChatMessage, type DocumentItem } from "../types";
-import { NEW_CHAT_ID } from "../lib/chat-sessions";
+import { ChatInput } from "../components/chat/chat-input";
 import { DocumentSidebar } from "../components/chat/document-sidebar";
 import { MessageList } from "../components/chat/message-list";
-import { ChatInput } from "../components/chat/chat-input";
-import { useDocumentSelection } from "../hooks/use-document-selection";
-import { useChatInput } from "../hooks/use-chat-input";
-import { useDocumentsQuery } from "../hooks/use-documents-query";
 import { LoadingPanel } from "../components/ui/loading-panel";
+import { useChatInput } from "../hooks/use-chat-input";
+import { useDocumentSelection } from "../hooks/use-document-selection";
+import { useDocumentsQuery } from "../hooks/use-documents-query";
+import { NEW_CHAT_ID } from "../lib/chat-sessions";
+import type { ChatMessage, DocumentItem } from "../types";
 
 type ChatPageProps = {
   chatId: string;

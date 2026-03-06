@@ -1,4 +1,4 @@
-import { type ChangeEvent, type RefObject } from "react";
+import type { ChangeEvent, RefObject } from "react";
 import { cn } from "../../lib/utils";
 
 type DocumentUploadZoneProps = {

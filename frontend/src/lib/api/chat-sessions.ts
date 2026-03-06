@@ -1,8 +1,8 @@
 import {
+  type ChatSession,
   loadSessions,
   saveSessions,
   sortSessionsByUpdatedAtDesc,
-  type ChatSession,
 } from "../chat-sessions";
 
 export async function fetchChatSessions(): Promise<ChatSession[]> {

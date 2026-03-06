@@ -1,6 +1,6 @@
-import { Button } from "../ui/button";
-import { cn } from "../../lib/utils";
 import { BUILTIN_MODELS, type BuiltinModelId } from "../../lib/system-settings";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 
 type BuiltinModelSectionProps = {
   selectedModel: BuiltinModelId;

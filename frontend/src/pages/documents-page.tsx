@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
 import { Edit3, MessageCirclePlus, Trash2, Upload } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { useMemo, useState } from "react";
 import { DocumentCard } from "../components/documents/document-card";
 import { DocumentUploadZone } from "../components/documents/document-upload-zone";
+import { Button } from "../components/ui/button";
 import { useDocumentUpload } from "../hooks/use-document-upload";
-import { type DocumentItem } from "../types";
 import { cn } from "../lib/utils";
+import type { DocumentItem } from "../types";
 
 type DocumentsPageProps = {
   initialDocuments: DocumentItem[];
@@ -75,6 +75,7 @@ export function DocumentsPage({
       </header>
 
       <section
+        aria-label="文档列表与上传区域"
         onDrop={onDropFiles}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}

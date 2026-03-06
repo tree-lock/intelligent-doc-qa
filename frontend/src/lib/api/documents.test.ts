@@ -47,7 +47,7 @@ describe("documents api", () => {
     const before = await fetchDocuments();
     expect(before).toHaveLength(2);
 
-    await deleteDocuments([before[0]!.id]);
+    await deleteDocuments([before[0]?.id]);
     const after = await fetchDocuments();
     expect(after).toHaveLength(1);
   });

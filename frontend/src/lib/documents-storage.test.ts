@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { type DocumentItem } from "../types";
+import type { DocumentItem } from "../types";
 import {
   DOCUMENTS_STORAGE_KEY,
   loadDocuments,

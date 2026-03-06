@@ -1,4 +1,4 @@
-import { type DocumentItem } from "../types";
+import type { DocumentItem } from "../types";
 
 export const DOCUMENTS_STORAGE_KEY = "doc-qa.documents.v1";
 

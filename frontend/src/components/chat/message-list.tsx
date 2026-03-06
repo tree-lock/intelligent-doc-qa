@@ -1,5 +1,5 @@
-import { type ChatMessage } from "../../types";
 import { cn } from "../../lib/utils";
+import type { ChatMessage } from "../../types";
 
 type MessageListProps = {
   messages: ChatMessage[];

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { type DocumentItem } from "../types";
+import type { DocumentItem } from "../types";
 
 /**
  * Manages document selection for chat context where loaded documents are locked.

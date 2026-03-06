@@ -1,4 +1,4 @@
-import { type DocumentItem, type ChatMessage } from "../types";
+import type { ChatMessage, DocumentItem } from "../types";
 
 export type ChatSessionId = string;
 

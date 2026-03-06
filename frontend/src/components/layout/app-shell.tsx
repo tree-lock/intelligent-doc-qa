@@ -1,10 +1,10 @@
-import { type ReactNode } from "react";
 import { Bot, FileText, MoonStar, Settings } from "lucide-react";
+import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_ROUTE_PATH } from "../../app/route-config";
-import { Button } from "../ui/button";
+import type { ChatSession } from "../../lib/chat-sessions";
 import { cn } from "../../lib/utils";
-import { type ChatSession } from "../../lib/chat-sessions";
+import { Button } from "../ui/button";
 
 type AppShellProps = {
   recentSessions: ChatSession[];

@@ -3,7 +3,7 @@ import {
   resolveCurrentChatId,
   shouldRedirectInvalidChatRoute,
 } from "./chat-route";
-import { NEW_CHAT_ID, type ChatSession } from "./chat-sessions";
+import { type ChatSession, NEW_CHAT_ID } from "./chat-sessions";
 
 const sampleSessions: ChatSession[] = [
   {

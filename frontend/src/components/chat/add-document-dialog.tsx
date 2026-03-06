@@ -1,4 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
+import type { DocumentItem } from "../../types";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -8,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { type DocumentItem } from "../../types";
-import { cn } from "../../lib/utils";
 
 type AddDocumentDialogProps = {
   open: boolean;

@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_ROUTE_PATH, getChatRoutePath } from "../app/route-config";
-import { type ChatMessage, type DocumentItem } from "../types";
-import { useSendChatMessageMutation } from "./use-send-chat-message-mutation";
-import {
-  NEW_CHAT_ID,
-  createChatId,
-  createSessionTitle,
-  sortSessionsByUpdatedAtDesc,
-  type ChatSession,
-} from "../lib/chat-sessions";
 import {
   resolveCurrentChatId,
   shouldRedirectInvalidChatRoute,
 } from "../lib/chat-route";
+import {
+  type ChatSession,
+  createChatId,
+  createSessionTitle,
+  NEW_CHAT_ID,
+  sortSessionsByUpdatedAtDesc,
+} from "../lib/chat-sessions";
+import type { ChatMessage, DocumentItem } from "../types";
+import { useSendChatMessageMutation } from "./use-send-chat-message-mutation";
 
 export function useAppChatState(
   sessions: ChatSession[],
