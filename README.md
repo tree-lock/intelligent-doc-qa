@@ -26,11 +26,11 @@
 - 支持配置 AI Provider（OpenAI / Claude / 本地模型）
 - 支持模型参数配置（如 model、temperature、max tokens）
 
-### 2.4 UI 页面
+### 2.4 UI 页面（已实现）
 
-- 文档管理页面（上传、列表、详情、删除）
-- Agent 问答页面（会话列表、消息区、输入区）
-- 系统配置页面（Provider、Key、默认模型）
+- 文档管理页面（上传、列表、多选、删除、开启新对话）
+- Agent 问答页面（会话列表、消息区、输入区、对话文档侧边栏、多轮对话）
+- 系统配置页面（内置/自定义模型、Provider、Key、模型参数）
 
 ## 3. 技术栈（仅列技术与用途）
 
@@ -118,25 +118,22 @@ flowchart LR
 
 ### 页面划分
 
-- `/documents`：文档管理
-- `/chat`：Agent 问答
+- `/`：文档管理
+- `/chat`：Agent 问答（新会话）
+- `/chat/:id`：Agent 问答（历史会话）
 - `/settings`：系统配置
 
-### 目录建议
+### 目录结构（当前实现）
 
 ```text
 src/
-  app/                 # 路由与应用壳
-  pages/               # 页面
-  features/
-    documents/         # 文档业务组件/状态
-    chat/              # 会话与消息组件/状态
-    settings/          # 配置表单与状态
-  components/ui/       # shadcn/ui 组件
+  app/                 # 路由、Provider、route-context
+  pages/               # 页面组件（documents / chat / settings）
+  components/          # layout、documents、chat、settings、ui
+  hooks/               # use-documents-query、use-chat-sessions、use-app-chat-state 等
   lib/
-    api/               # 请求封装
-    query/             # TanStack Query 客户端
-    store/             # Zustand store
+    api/               # Documents / Chat / ChatSessions API 封装
+    documents-storage  # 文档、会话、系统配置的本地存储
 ```
 
 ### 状态与请求
@@ -197,11 +194,17 @@ OpenAPI 文档建议：
 
 ### 10.2 环境变量（示例）
 
+后端：
+
 - `APP_ENV=dev`
 - `OPENAI_API_KEY=...`
 - `ANTHROPIC_API_KEY=...`
 - `DEFAULT_PROVIDER=openai`
 - `VECTOR_STORE=faiss`
+
+前端：
+
+- `VITE_API_BASE_URL`：后端 API 基地址（默认 `http://localhost:8000`，Docker 环境下可设为 `http://backend:8000`）
 
 ### 10.3 启动方式（示例）
 
@@ -211,7 +214,7 @@ docker compose up --build
 
 启动后访问：
 
-- 前端：`http://127.0.0.1:5173`
+- 前端：`http://127.0.0.1:80`
 - 后端：`http://127.0.0.1:8000`
 - 后端文档：`http://127.0.0.1:8000/api/v1/docs`
 

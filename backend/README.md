@@ -89,7 +89,16 @@ docker compose up --build backend
 - `GET /api/v1/system/config`
 - `PUT /api/v1/system/config`
 
-## 7. 目录结构
+## 7. 与前端对接
+
+前端通过环境变量 `VITE_API_BASE_URL` 指定后端地址，默认 `http://localhost:8000`。本地联调时：
+
+1. 先启动 backend（端口 8000）
+2. 再启动 frontend，确保 `VITE_API_BASE_URL` 指向 backend
+
+前端 API 封装层（`frontend/src/lib/api/`）当前为本地存储 + Mock，对接时需替换为对下列接口的 HTTP 调用。
+
+## 8. 目录结构
 
 ```text
 backend/

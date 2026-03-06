@@ -4,11 +4,11 @@
 
 `frontend` 是智能文档问答助手的前端应用，负责：
 
-- 文档管理页面（上传、列表、详情、删除）
+- 文档管理页面（上传、列表、多选、删除）
 - Agent 问答页面（会话列表、消息区、输入区）
 - 系统配置页面（Provider、默认模型/参数）
 
-前端通过 HTTP API 调用 `backend` 服务，承载页面交互、状态管理和请求缓存。
+前端承载页面交互、状态管理和请求缓存。当前版本使用本地存储（localStorage）+ Mock 实现可独立运行；通过替换 `lib/api` 层即可对接后端 HTTP API。
 
 ## 2. 技术栈
 
@@ -53,11 +53,13 @@ bun run dev           # 本地开发
 bun run build         # 生产构建
 bun run test          # 单元测试
 bun run preview       # 预览构建产物
+bun run lint          # 代码检查
+bun run lint:fix      # 自动修复 lint 问题
 bun run format        # 使用 Biome 自动格式化
 bun run format:check  # 检查格式
 ```
 
-## 3.4 Docker 运行
+### 3.4 Docker 运行
 
 在仓库根目录执行：
 
@@ -65,9 +67,13 @@ bun run format:check  # 检查格式
 docker compose up --build frontend
 ```
 
-页面地址：
+页面地址：`http://127.0.0.1:80`
 
-- Web: `http://127.0.0.1:5173`
+构建时可通过 `VITE_API_BASE_URL` 指定后端 API 地址，例如：
+
+```bash
+VITE_API_BASE_URL=http://your-backend:8000 docker compose up --build frontend
+```
 
 ## 4. 与后端联调
 
@@ -80,73 +86,110 @@ docker compose up --build frontend
 
 建议使用环境变量管理 API 基地址（如 `VITE_API_BASE_URL`），避免在业务代码中硬编码地址。
 
-## 5. 目录基线（参考 bulletproof-react）
-
-参考：
-
-- https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md
-
-当前已按该结构建立基础目录骨架（每个目录至少包含一个示例文件）：
+## 5. 目录结构
 
 ```text
 src/
-  app/
-    routes/
-  assets/
+  app/                    # 应用入口与路由
+    route-config.ts       # 路由路径配置
+    route-context.ts      # 路由上下文（Chat 状态透传）
+    router.tsx            # React Router 配置
+    provider.tsx          # TanStack Query + 全局 Provider
+  pages/                  # 页面组件
+    documents-page.tsx    # 文档管理页
+    documents-route-page.tsx
+    chat-page.tsx         # Agent 问答页
+    chat-route-page.tsx
+    settings-page.tsx     # 系统配置页
+    settings-route-page.tsx
   components/
-  config/
-  hooks/
+    layout/               # 布局组件
+      app-shell.tsx       # 左侧导航 + 主内容区
+    documents/            # 文档管理相关组件
+      document-card.tsx   # 文档卡片
+      document-upload-zone.tsx  # 上传区域（拖拽 + 点击）
+    chat/                 # 问答相关组件
+      chat-input.tsx      # 输入框
+      message-list.tsx    # 消息列表
+      document-sidebar.tsx     # 对话文档侧边栏
+      add-document-dialog.tsx  # 添加文档弹窗
+    settings/             # 配置相关组件
+      model-source-section.tsx
+      builtin-model-section.tsx
+      custom-model-section.tsx
+      parameters-section.tsx
+      settings-field.tsx
+    ui/                   # 通用 UI 组件（shadcn/ui）
+  hooks/                  # 业务 hooks
+    use-documents-query.ts
+    use-document-upload.ts
+    use-chat-sessions.ts
+    use-app-chat-state.ts
+    use-send-chat-message-mutation.ts
+    use-chat-input.ts
+    use-document-selection.ts
+    use-system-settings.ts
   lib/
-  stores/
-  testing/
-  types/
-  utils/
+    api/                  # API 封装层
+      documents.ts
+      chat.ts
+      chat-sessions.ts
+    documents-storage.ts  # 文档本地存储
+    chat-sessions.ts      # 会话模型与本地持久化
+    system-settings-storage.ts
+    system-settings.ts
+  types/                  # 类型定义
 ```
-
-说明：
-
-- `example-*` 文件仅用于初始化目录结构，不代表最终业务实现。
-- 具体业务模块（如 documents/chat/settings）可在 `features/` 下按同样模式扩展。
 
 ## 6. 开发约定
 
 - 服务端状态优先放在 `TanStack Query`
 - 会话草稿、UI 偏好等本地状态放在 `Zustand`
 - 公共请求逻辑集中在 `src/lib/api`
-- 提交前至少执行一次 `bun run format:check`
+- 提交前执行 `bun run lint:fix` 和 `bun run format`，确保通过 `bun run lint` 检查
 
-## 7. 当前 UI 骨架（2026-03）
+## 7. 当前实现（2026-03）
 
-当前已完成首版三页骨架与统一布局（参考深色学习助手风格）：
+前端三页已完整实现，采用浅色学习助手风格，布局与交互可独立运行。
 
-- `src/components/layout/app-shell.tsx`
-  - 左侧导航（文档管理 / Agent 问答 / 系统配置）
-  - 主内容区统一容器与背景层次
-- `src/pages/documents-page.tsx`
-  - 上传输入区（UI 占位）
-  - 文档列表、状态标签、删除操作入口（Mock）
-- `src/pages/chat-page.tsx`
-  - 会话列表（Mock）
-  - 消息展示区（区分用户与助手）与输入框（UI 占位）
-- `src/pages/settings-page.tsx`
-  - 模型来源切换（系统内置 MiniMax / 自定义模型）
-  - 自定义模型字段（Provider / Model Name / API Key）
-  - 模型参数表单（maxTokens / temperature / topP）
-  - 保存与重置按钮（本地持久化）
-### 7.1 系统配置页模型配置说明
+### 7.1 布局与导航
 
-- 内置模型：
-  - 目前内置 `MiniMax`，可直接选择并保存。
-- 自定义模型：
-  - 选择“自定义模型”后，需要填写 `Provider`、`Model Name`、`API Key`。
-  - 示例：`Provider=Qwen`、`Model Name=Qwen3.5-plus`。
-- 保存策略：
-  - 当前阶段使用浏览器 `localStorage` 持久化（键名：`doc-qa.system-settings.v1`）。
-  - 页面刷新后会自动加载已保存配置。
-  - 该策略可在后续替换为 `System API` 持久化，不影响页面表单结构。
+- **`src/components/layout/app-shell.tsx`**
+  - 左侧导航：文档管理、Agent 问答、系统配置
+  - 最近会话列表（最多 8 条）
+  - 主内容区统一容器与背景
 
-后续接入建议：
+### 7.2 文档管理页 `/`
 
-1. 在 `src/lib/api` 增加 Documents / Chat / System API 封装
-2. 页面层使用 TanStack Query 请求后端 API
-3. 把本地 UI 状态（例如草稿、当前会话）迁移到 `Zustand`
+- **`src/pages/documents-page.tsx`**
+  - 文档上传：拖拽或点击上传，支持 TXT / Markdown
+  - 文档列表：卡片展示，支持多选、编辑模式
+  - 删除：编辑模式下可批量删除
+  - 开启新对话：勾选文档后跳转至 Agent 问答页，发送首条消息时加载
+
+### 7.3 Agent 问答页 `/chat`、`/chat/:id`
+
+- **`src/pages/chat-page.tsx`**
+  - 会话管理：新会话 `/chat`，历史会话 `/chat/:id`
+  - 消息区：区分用户与助手，支持多轮对话
+  - 对话文档侧边栏：展示已加载 / 待加载文档，支持通过弹窗添加文档
+  - 输入框：支持回车发送、提交中禁用
+- **数据层**：会话与消息当前由 `localStorage` + Mock 回答实现，后续可替换为后端 Chat API
+
+### 7.4 系统配置页 `/settings`
+
+- **`src/pages/settings-page.tsx`**
+  - 模型来源：系统内置 MiniMax / 自定义模型
+  - 自定义模型：Provider、Model Name、API Key
+  - 模型参数：maxTokens、temperature、topP
+  - 保存与重置，`localStorage` 持久化
+
+### 7.5 数据层说明
+
+| 模块       | 当前实现              | 后端对接说明                       |
+|------------|-----------------------|------------------------------------|
+| 文档管理   | `documents-storage.ts`（localStorage） | 替换 `lib/api/documents.ts` 为 HTTP 请求 |
+| 会话与消息 | `chat-sessions.ts` + `lib/api/chat.ts`（Mock） | 替换 `sendChatMessage` 调用 `POST /api/v1/chat/completions` |
+| 系统配置   | `system-settings-storage.ts`（localStorage，键名：`doc-qa.system-settings.v1`） | 可选替换为 `System API` 持久化           |
+
+通过环境变量 `VITE_API_BASE_URL` 配置后端地址，便于联调切换。
