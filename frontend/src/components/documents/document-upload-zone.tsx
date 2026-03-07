@@ -28,7 +28,8 @@ export function DocumentUploadZone({
           isDragging && "border-primary bg-primary/10",
         )}
       >
-        拖拽文件到文档列表任意区域即可上传（支持 TXT、Markdown、PDF、Word、PPT、图片、HTML）
+        拖拽文件到文档列表任意区域即可上传（支持
+        TXT、Markdown、PDF、Word、PPT、图片、HTML）
       </div>
     </>
   );

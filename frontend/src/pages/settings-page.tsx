@@ -4,11 +4,8 @@ import { toast } from "sonner";
 import { ParametersSection } from "../components/settings/parameters-section";
 import { SettingsField } from "../components/settings/settings-field";
 import { Button } from "../components/ui/button";
-import {
-  fetchMineruTokenStatus,
-  updateMineruToken,
-} from "../lib/api/system";
 import { useSystemSettings } from "../hooks/use-system-settings";
+import { fetchMineruTokenStatus, updateMineruToken } from "../lib/api/system";
 
 const MINERU_QUERY_KEY = ["mineru-token"] as const;
 
@@ -211,7 +208,7 @@ export function SettingsPage() {
             error={fieldErrors.apiKey}
             type="password"
             placeholder={
-              draft.hasApiKey ? "留空则保留现有密钥" : "请输入 API Key"
+              draft.hasApiKey ? "••••••••••••••••" : "请输入 API Key"
             }
             hint={
               draft.hasApiKey ? "当前密钥已保存，留空不会覆盖。" : undefined
@@ -263,7 +260,7 @@ export function SettingsPage() {
                 onChange={(e) => setMineruToken(e.target.value)}
                 placeholder={
                   mineruStatus?.hasToken
-                    ? "留空则保留现有 Token，输入新值可覆盖"
+                    ? "••••••••••••••••"
                     : "请输入 MinerU API Token"
                 }
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
