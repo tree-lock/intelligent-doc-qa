@@ -18,11 +18,11 @@ export function ThinkBlock({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50/80">
+    <div className="mb-3 rounded-lg border border-border bg-muted/80">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-100/80"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-muted"
       >
         <Lightbulb className="h-4 w-4 shrink-0 text-amber-500" />
         <span>已经完成思考</span>
@@ -33,10 +33,10 @@ export function ThinkBlock({
         )}
       </button>
       {expanded && (
-        <div className="border-t border-slate-200 px-3 py-2">
+        <div className="border-t border-border px-3 py-2">
           <MarkdownContent
             content={thinkContent}
-            className="text-slate-600 [&_p]:mb-1 [&_p:last-child]:mb-0"
+            className="text-muted-foreground [&_p]:mb-1 [&_p:last-child]:mb-0"
           />
         </div>
       )}

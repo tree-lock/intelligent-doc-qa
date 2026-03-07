@@ -15,12 +15,14 @@ function DocumentsRoutePageContent() {
 
 export function DocumentsRoutePage() {
   return (
-    <Suspense
-      fallback={
-        <LoadingPanel title="文档加载中" description="正在读取文档列表..." />
-      }
-    >
-      <DocumentsRoutePageContent />
-    </Suspense>
+    <div className="flex min-h-[calc(100vh-8rem)] min-w-0 flex-1 flex-col justify-center">
+      <Suspense
+        fallback={
+          <LoadingPanel title="文档加载中" description="正在读取文档列表..." />
+        }
+      >
+        <DocumentsRoutePageContent />
+      </Suspense>
+    </div>
   );
 }

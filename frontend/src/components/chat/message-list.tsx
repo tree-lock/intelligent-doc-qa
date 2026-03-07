@@ -50,7 +50,7 @@ export function MessageList({
       className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto p-4"
     >
       {messages.length === 0 && !isSendingMessage ? (
-        <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-500">
+        <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/70 px-4 text-sm text-muted-foreground">
           暂无对话，输入你的第一个问题开始问答。
         </div>
       ) : (
@@ -61,8 +61,8 @@ export function MessageList({
               className={cn(
                 "max-w-[85%] min-w-0 wrap-anywhere rounded-2xl px-4 py-3 text-sm leading-6",
                 message.role === "assistant"
-                  ? "mr-auto border border-slate-200 bg-white text-slate-800"
-                  : "ml-auto border border-blue-200 bg-blue-50 text-blue-900",
+                  ? "mr-auto border border-border bg-card text-foreground"
+                  : "ml-auto border border-primary/30 bg-primary/10 text-foreground",
               )}
             >
               {message.role === "assistant" ? (
@@ -73,9 +73,9 @@ export function MessageList({
             </div>
           ))}
           {isSendingMessage ? (
-            <div className="mr-auto max-w-[85%] rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-500" />
+            <div className="mr-auto max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
                 <span>正在思考...</span>
               </div>
             </div>

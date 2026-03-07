@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   createLLMConfig,
   deleteLLMConfig,
@@ -96,6 +97,7 @@ export function useSystemSettings() {
     gcTime: Number.POSITIVE_INFINITY,
   });
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [draft, setDraft] = useState<LLMConfigDraft>(DEFAULT_LLM_CONFIG_DRAFT);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [fieldErrors, setFieldErrors] = useState<SettingsFieldErrors>({});
@@ -118,6 +120,7 @@ export function useSystemSettings() {
   useEffect(() => {
     const configs = configsRef.current;
     if (configs.length === 0) {
+      setIsCreatingNew(false);
       setSelectedConfigId((prev) => (prev === null ? prev : null));
       setDraft((prev) => {
         if (prev.provider === firstProvider && prev.name === "") {
@@ -125,6 +128,9 @@ export function useSystemSettings() {
         }
         return { ...DEFAULT_LLM_CONFIG_DRAFT, provider: firstProvider };
       });
+      return;
+    }
+    if (isCreatingNew) {
       return;
     }
     if (
@@ -138,7 +144,13 @@ export function useSystemSettings() {
       setSelectedConfigId(nextSelected.id);
       setDraft(toLLMConfigDraft(nextSelected));
     }
-  }, [configsLength, configIds, firstProvider, selectedConfigId]);
+  }, [
+    configsLength,
+    configIds,
+    firstProvider,
+    selectedConfigId,
+    isCreatingNew,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: (payload: LLMConfigCreateInput) => createLLMConfig(payload),
@@ -180,6 +192,7 @@ export function useSystemSettings() {
     if (!config) {
       return;
     }
+    setIsCreatingNew(false);
     setSelectedConfigId(config.id);
     setDraft(toLLMConfigDraft(config));
     setFieldErrors({});
@@ -188,6 +201,7 @@ export function useSystemSettings() {
   };
 
   const createNew = () => {
+    setIsCreatingNew(true);
     setSelectedConfigId(null);
     setDraft({
       ...DEFAULT_LLM_CONFIG_DRAFT,
@@ -231,13 +245,16 @@ export function useSystemSettings() {
         llmConfigsQueryKey,
         (previous = []) => upsertConfig(previous, savedConfig),
       );
+      setIsCreatingNew(false);
       setSelectedConfigId(savedConfig.id);
       setDraft(toLLMConfigDraft(savedConfig));
       setSaveStatus("success");
       return true;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "保存失败");
+      const message = error instanceof Error ? error.message : "保存失败";
+      setErrorMessage(message);
       setSaveStatus("error");
+      toast.error(message, { duration: Infinity });
       return false;
     }
   };
@@ -263,6 +280,7 @@ export function useSystemSettings() {
         remainingConfigs[0] ??
         null;
       if (nextSelected) {
+        setIsCreatingNew(false);
         setSelectedConfigId(nextSelected.id);
         setDraft(toLLMConfigDraft(nextSelected));
       } else {
@@ -272,8 +290,10 @@ export function useSystemSettings() {
       setSaveStatus("success");
       return true;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "删除失败");
+      const message = error instanceof Error ? error.message : "删除失败";
+      setErrorMessage(message);
       setSaveStatus("error");
+      toast.error(message, { duration: Infinity });
       return false;
     }
   };
@@ -302,8 +322,10 @@ export function useSystemSettings() {
       setSaveStatus("success");
       return true;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "设为默认失败");
+      const message = error instanceof Error ? error.message : "设为默认失败";
+      setErrorMessage(message);
       setSaveStatus("error");
+      toast.error(message, { duration: Infinity });
       return false;
     }
   };

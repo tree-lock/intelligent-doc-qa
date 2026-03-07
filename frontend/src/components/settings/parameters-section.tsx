@@ -24,7 +24,7 @@ export function ParametersSection({
   onFieldChange,
 }: ParametersSectionProps) {
   return (
-    <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2">
+    <section className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:grid-cols-2">
       <SettingsField
         label="Max Tokens"
         value={maxTokens}

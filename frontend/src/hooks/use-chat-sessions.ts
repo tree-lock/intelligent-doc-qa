@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Dispatch, type SetStateAction, useCallback } from "react";
+import { toast } from "sonner";
 import {
   fetchChatSessions,
   persistChatSessions,
@@ -23,6 +24,11 @@ export function useChatSessions() {
   const { mutate: mutatePersistChatSessions } = useMutation({
     mutationFn: (nextSessions: ChatSession[]) =>
       persistChatSessions(nextSessions),
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : "会话同步失败，请稍后重试";
+      toast.error(message, { duration: Infinity });
+    },
   });
 
   const setSessions = useCallback<Dispatch<SetStateAction<ChatSession[]>>>(

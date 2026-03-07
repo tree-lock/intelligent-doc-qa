@@ -44,11 +44,13 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <aside className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">模型配置</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="text-base font-semibold text-foreground">
+              模型配置
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
               不再提供内置模型，所有模型都需要手动配置。
             </p>
           </div>
@@ -56,7 +58,7 @@ export function SettingsPage() {
             type="button"
             variant="outline"
             onClick={createNew}
-            className="rounded-lg border-slate-300 px-3 py-2 text-xs"
+            className="rounded-lg border-border px-3 py-2 text-xs"
           >
             新建
           </Button>
@@ -64,7 +66,7 @@ export function SettingsPage() {
 
         <div className="space-y-2">
           {configs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
               暂无模型配置，先创建一个。
             </div>
           ) : (
@@ -75,21 +77,21 @@ export function SettingsPage() {
                 onClick={() => selectConfig(config.id)}
                 className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                   selectedConfigId === config.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-slate-200 bg-white hover:border-slate-300"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-border"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium text-slate-900">
+                  <span className="truncate text-sm font-medium text-foreground">
                     {config.name}
                   </span>
                   {config.isDefault ? (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700">
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
                       默认
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {config.provider} / {config.modelName}
                 </p>
               </button>
@@ -100,13 +102,13 @@ export function SettingsPage() {
 
       <div className="space-y-6">
         <header>
-          <h1 className="text-2xl font-semibold text-slate-900">系统配置</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">系统配置</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             统一管理多个模型配置，并在对话中按需切换。
           </p>
         </header>
 
-        <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2">
+        <section className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:grid-cols-2">
           <SettingsField
             label="配置名称"
             value={draft.name}
@@ -115,11 +117,11 @@ export function SettingsPage() {
             placeholder="例如：OpenAI 主模型"
           />
           <label className="space-y-1 text-sm">
-            <span className="text-slate-700">Provider</span>
+            <span className="text-muted-foreground">Provider</span>
             <select
               value={draft.provider}
               onChange={(event) => setField("provider", event.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:border-ring focus:outline-none"
             >
               {providers.map((provider) => (
                 <option key={provider} value={provider}>
@@ -166,7 +168,7 @@ export function SettingsPage() {
             }
             className="md:col-span-2"
           />
-          <label className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 md:col-span-2">
+          <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground md:col-span-2">
             <input
               type="checkbox"
               checked={draft.isDefault}
@@ -202,7 +204,7 @@ export function SettingsPage() {
               variant="outline"
               onClick={reset}
               disabled={isSaving}
-              className="rounded-lg border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+              className="rounded-lg border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-accent"
             >
               重置
             </Button>
@@ -211,7 +213,7 @@ export function SettingsPage() {
               variant="outline"
               onClick={handleSetDefault}
               disabled={isSaving || !selectedConfigId}
-              className="rounded-lg border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+              className="rounded-lg border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-accent"
             >
               设为默认
             </Button>
@@ -228,7 +230,7 @@ export function SettingsPage() {
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             >
               {isSaving ? "保存中..." : "保存配置"}
             </Button>

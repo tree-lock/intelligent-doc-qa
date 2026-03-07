@@ -18,10 +18,10 @@ export function DocumentCard({
   return (
     <li
       className={cn(
-        "relative rounded-xl border bg-slate-50/70 px-4 py-3 transition",
+        "relative rounded-xl border bg-muted/70 px-4 py-3 transition",
         isChecked
-          ? "border-blue-300 bg-blue-50/70 shadow-sm"
-          : "border-slate-200 hover:border-slate-300",
+          ? "border-primary/50 bg-primary/10 shadow-sm"
+          : "border-border hover:border-border",
       )}
     >
       {showCheckbox ? (
@@ -30,16 +30,16 @@ export function DocumentCard({
             type="checkbox"
             checked={isChecked}
             onChange={(event) => onToggle(doc.id, event.target.checked)}
-            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
           />
         </label>
       ) : null}
 
       <div className={showCheckbox ? "pr-8" : ""}>
-        <div className="truncate text-sm font-medium text-slate-800">
+        <div className="truncate text-sm font-medium text-foreground">
           {doc.name}
         </div>
-        <div className="mt-1 text-xs text-slate-500">
+        <div className="mt-1 text-xs text-muted-foreground">
           {doc.type.toUpperCase()} · 更新于 {doc.updatedAt}
         </div>
       </div>

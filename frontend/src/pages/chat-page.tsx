@@ -75,22 +75,24 @@ export function ChatPage({
         />
       </Suspense>
 
-      <section className="col-span-9 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
-        <header className="border-b border-slate-200 px-4 py-3">
+      <section className="col-span-9 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm">
+        <header className="border-b border-border px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-sm font-medium text-slate-900">Agent 问答</h1>
-              <p className="mt-1 text-xs text-slate-500">
+              <h1 className="text-sm font-medium text-foreground">
+                Agent 问答
+              </h1>
+              <p className="mt-1 text-xs text-muted-foreground">
                 会话 ID：
                 {chatId === NEW_CHAT_ID ? "new（发送首条消息后生成）" : chatId}
               </p>
             </div>
-            <label className="flex min-w-56 flex-col gap-1 text-xs text-slate-500">
+            <label className="flex min-w-56 flex-col gap-1 text-xs text-muted-foreground">
               <span>当前对话模型</span>
               <select
                 value={currentModelConfigId ?? ""}
                 onChange={(event) => onModelConfigChange(event.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
                 disabled={llmConfigs.length === 0}
               >
                 {llmConfigs.length === 0 ? (
@@ -109,7 +111,7 @@ export function ChatPage({
 
         <MessageList messages={messages} isSendingMessage={isSendingMessage} />
 
-        <footer className="border-t border-slate-200 p-4">
+        <footer className="border-t border-border p-4">
           <ChatInput
             value={inputValue}
             onChange={setInputValue}

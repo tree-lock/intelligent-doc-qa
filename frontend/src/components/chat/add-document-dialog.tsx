@@ -59,8 +59,8 @@ export function AddDocumentDialog({
                 className={cn(
                   "flex items-start gap-3 rounded-lg border px-3 py-2",
                   isLoaded
-                    ? "border-blue-200 bg-blue-50/70"
-                    : "border-slate-200 bg-white",
+                    ? "border-primary/30 bg-primary/10"
+                    : "border-border bg-card",
                 )}
               >
                 <input
@@ -70,20 +70,20 @@ export function AddDocumentDialog({
                   onChange={(event) =>
                     onToggle(document.id, event.target.checked)
                   }
-                  className="mt-0.5 h-4 w-4 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-0.5 h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm text-slate-800">
+                    <span className="truncate text-sm text-foreground">
                       {document.name}
                     </span>
                     {isLoaded ? (
-                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] text-blue-700">
+                      <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">
                         已加载
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     {document.type.toUpperCase()} · {document.updatedAt}
                   </div>
                 </div>
@@ -93,7 +93,7 @@ export function AddDocumentDialog({
         </div>
 
         <DialogFooter className="sm:justify-between">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             已选择 {selectedDocumentIds.length} 个文档（已加载 {loadedCount}
             ，待生效 {Math.max(selectedDocumentIds.length - loadedCount, 0)}）
           </span>

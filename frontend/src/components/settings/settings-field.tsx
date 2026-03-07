@@ -37,7 +37,7 @@ export function SettingsField({
 
   return (
     <label className={cn("space-y-1 text-sm", className)}>
-      <span className="text-slate-700">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <input
         type={type}
         value={value}
@@ -48,13 +48,13 @@ export function SettingsField({
         step={step}
         aria-invalid={Boolean(error)}
         className={cn(
-          "w-full rounded-lg border bg-white px-3 py-2 text-slate-800 focus:outline-none",
+          "w-full rounded-lg border bg-background px-3 py-2 text-foreground focus:outline-none",
           error
-            ? "border-red-400 focus:border-red-500"
-            : "border-slate-300 focus:border-blue-500",
+            ? "border-destructive focus:border-destructive"
+            : "border-input focus:border-ring",
         )}
       />
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </label>
   );

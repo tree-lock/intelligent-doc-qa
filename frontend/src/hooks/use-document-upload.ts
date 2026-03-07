@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import { deleteDocuments, uploadDocuments } from "../lib/api/documents";
 import { documentsQueryKey } from "./use-documents-query";
 
@@ -19,12 +20,22 @@ export function useDocumentUpload() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: documentsQueryKey });
     },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : "文档上传失败，请稍后重试";
+      toast.error(message, { duration: Infinity });
+    },
   });
 
   const { mutateAsync: removeDocuments, isPending: isDeleting } = useMutation({
     mutationFn: deleteDocuments,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: documentsQueryKey });
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : "文档删除失败，请稍后重试";
+      toast.error(message, { duration: Infinity });
     },
   });
 

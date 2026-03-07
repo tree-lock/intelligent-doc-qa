@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { APP_ROUTE_PATH, getChatRoutePath } from "../app/route-config";
 import {
   resolveCurrentChatId,
@@ -185,6 +186,10 @@ export function useAppChatState(
             }),
           ),
         );
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "发送消息失败，请稍后重试";
+        toast.error(message, { duration: Infinity });
       } finally {
         setOptimisticUserMessage(null);
       }

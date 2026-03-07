@@ -24,8 +24,8 @@ export function DocumentUploadZone({
       />
       <div
         className={cn(
-          "rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500 transition",
-          isDragging && "border-blue-500 bg-blue-50/50",
+          "rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground transition",
+          isDragging && "border-primary bg-primary/10",
         )}
       >
         拖拽文件到文档列表任意区域即可上传（支持 TXT / Markdown）

@@ -27,10 +27,10 @@ export const MarkdownContent = memo(function MarkdownContent({
         "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
         "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
         "[&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold",
-        "[&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-slate-600",
+        "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
         "[&_table]:w-full [&_table]:border-collapse [&_table]:my-3",
-        "[&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium",
-        "[&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2",
+        "[&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium",
+        "[&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2",
         className,
       )}
     >
@@ -40,7 +40,7 @@ export const MarkdownContent = memo(function MarkdownContent({
         components={{
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
           pre: ({ children }) => (
-            <pre className="my-2 overflow-x-auto rounded-lg bg-slate-100 p-3 text-sm">
+            <pre className="my-2 overflow-x-auto rounded-lg bg-muted p-3 text-sm">
               {children}
             </pre>
           ),
@@ -49,7 +49,7 @@ export const MarkdownContent = memo(function MarkdownContent({
             if (isInline) {
               return (
                 <code
-                  className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.9em]"
+                  className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
                   {...props}
                 >
                   {children}
