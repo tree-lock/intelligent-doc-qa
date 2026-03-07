@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { LLMConfigDraft } from "../lib/system-settings";
-import { validateSettings } from "./use-system-settings";
+import {
+  validateConnectivitySettings,
+  validateSettings,
+} from "./use-system-settings";
 
 describe("useSystemSettings", () => {
   it("requires api key for remote providers without saved secret", () => {
@@ -73,5 +76,42 @@ describe("useSystemSettings", () => {
 
     const errors = validateSettings(draft);
     expect(errors.apiBase).toBeTruthy();
+  });
+
+  it("allows connectivity test without config name", () => {
+    const draft: LLMConfigDraft = {
+      name: "",
+      provider: "openai",
+      apiKey: "sk-test",
+      apiBase: "",
+      modelName: "gpt-4o-mini",
+      temperature: 0.7,
+      topP: 0.9,
+      maxTokens: 2000,
+      isDefault: false,
+      hasApiKey: false,
+    };
+
+    const errors = validateConnectivitySettings(draft);
+    expect(errors.name).toBeUndefined();
+    expect(errors.apiKey).toBeUndefined();
+  });
+
+  it("requires api key for remote provider connectivity test", () => {
+    const draft: LLMConfigDraft = {
+      name: "",
+      provider: "claude",
+      apiKey: "",
+      apiBase: "",
+      modelName: "claude-3-5-haiku-latest",
+      temperature: 0.5,
+      topP: 0.8,
+      maxTokens: 1800,
+      isDefault: false,
+      hasApiKey: false,
+    };
+
+    const errors = validateConnectivitySettings(draft);
+    expect(errors.apiKey).toBeTruthy();
   });
 });

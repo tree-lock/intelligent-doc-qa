@@ -9,12 +9,17 @@ from app.core.config import get_settings
 from app.core.database import Database
 from app.main import create_app
 from app.api.v1.endpoints.chat import get_chat_service
+from app.api.v1.endpoints.system import get_system_service
 from app.repositories.chat_repo import ChatRepository
 from app.repositories.document_repo import DocumentRepository
 from app.repositories.system_repo import SystemRepository
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.documents import DocumentCreateRequest
-from app.schemas.system import LLMConfigCreateRequest, LLMConfigUpdateRequest
+from app.schemas.system import (
+    LLMConfigCreateRequest,
+    LLMConfigTestRequest,
+    LLMConfigUpdateRequest,
+)
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
 from app.services.llm_gateway import LLMGateway
@@ -36,6 +41,29 @@ class FakeLLMGateway(LLMGateway):
         return (
             f"[{config['provider']}/{config['model_name']}] "
             f"{message} | chunks={chunk_count} | history={history_count}"
+        )
+
+    def test_connection(self, *, config: dict) -> str:
+        return f"ok:{config['provider']}:{config['model_name']}"
+
+
+class FailingLLMGateway(LLMGateway):
+    def generate(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ) -> str:
+        raise AssertionError("generate should not be called in connectivity test")
+
+    def test_connection(self, *, config: dict) -> str:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to reach upstream model provider: connection refused",
         )
 
 
@@ -432,6 +460,44 @@ class BackendServiceTests(unittest.TestCase):
         self.system_service.delete_llm_config(created.id)
         self.assertEqual(self.system_service.list_llm_configs(), [])
 
+    def test_system_service_can_test_llm_connectivity(self) -> None:
+        # 使用 .env.test 中的 TEST_LLM_* 配置（make test 会加载）
+        provider = os.environ.get("TEST_LLM_PROVIDER", "openai")
+        model_name = os.environ.get("TEST_LLM_MODEL_NAME", "gpt-4o-mini")
+        api_base = os.environ.get("TEST_LLM_API_BASE") or None
+        api_key = os.environ.get("TEST_LLM_API_KEY", "sk-test")
+
+        response = self.system_service.test_llm_config(
+            LLMConfigTestRequest(
+                provider=provider,
+                modelName=model_name,
+                apiBase=api_base,
+                apiKey=api_key,
+            )
+        )
+
+        self.assertTrue(response.ok)
+        self.assertIn(provider, response.detail)
+        self.assertIn(model_name, response.detail)
+
+    def test_system_service_reports_connectivity_failure_without_raising(self) -> None:
+        failing_service = SystemService(
+            self.system_repository,
+            get_settings(),
+            llm_gateway=FailingLLMGateway(),
+        )
+
+        response = failing_service.test_llm_config(
+            LLMConfigTestRequest(
+                provider="local",
+                apiBase="http://127.0.0.1:11434/v1",
+                modelName="qwen2.5:7b",
+            )
+        )
+
+        self.assertFalse(response.ok)
+        self.assertIn("connection refused", response.detail)
+
     def test_system_endpoints_and_chat_model_metadata(self) -> None:
         app = create_app()
 
@@ -443,7 +509,13 @@ class BackendServiceTests(unittest.TestCase):
             system_repository=SystemRepository(Database(settings.database_url)),
             llm_gateway=FakeLLMGateway(),
         )
+        fake_system_service = SystemService(
+            SystemRepository(Database(settings.database_url)),
+            settings,
+            llm_gateway=FakeLLMGateway(),
+        )
         app.dependency_overrides[get_chat_service] = lambda: fake_chat_service
+        app.dependency_overrides[get_system_service] = lambda: fake_system_service
 
         with TestClient(app) as client:
             providers_response = client.get("/api/v1/system/providers")
@@ -472,6 +544,19 @@ class BackendServiceTests(unittest.TestCase):
             list_response = client.get("/api/v1/system/llm-configs")
             self.assertEqual(list_response.status_code, 200)
             self.assertEqual(len(list_response.json()["items"]), 1)
+
+            test_response = client.post(
+                "/api/v1/system/llm-configs/test",
+                json={
+                    "provider": "claude",
+                    "apiKey": "sk-ant-test",
+                    "modelName": "claude-3-5-haiku-latest",
+                },
+            )
+            self.assertEqual(test_response.status_code, 200)
+            test_payload = test_response.json()
+            self.assertTrue(test_payload["ok"])
+            self.assertIn("claude", test_payload["detail"])
 
             document = self.document_service.create_document_from_text(
                 DocumentCreateRequest(

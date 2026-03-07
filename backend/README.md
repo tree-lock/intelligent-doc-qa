@@ -25,6 +25,7 @@
 - `GET /api/v1/system/providers`
 - `GET /api/v1/system/llm-configs`
 - `POST /api/v1/system/llm-configs`
+- `POST /api/v1/system/llm-configs/test`
 - `PUT /api/v1/system/llm-configs/{id}`
 - `DELETE /api/v1/system/llm-configs/{id}`
 - `GET /api/v1/health`
@@ -37,6 +38,7 @@
 - 文档与聊天会话都持久化在 `SQLite`
 - 聊天返回 `content`，并附带 `sessionId`、`createdAt`、`references`
 - 系统配置支持多模型配置 CRUD，并以 `hasApiKey` 脱敏返回密钥状态
+- 系统配置支持模型连通性检测，便于前端在保存前验证 provider / model / key / apiBase
 - 当聊天请求带 `modelConfigId` 时，后端会按配置真实调用对应模型，并在响应里回传实际使用的 `provider/modelName`
 - `chat/sessions` 支持返回完整会话、消息、已加载文档、待加载文档和当前模型选择
 
@@ -213,6 +215,40 @@ SQLite 表：
 
 ## 8. 测试
 
+### 7.4 System API
+
+- `GET /api/v1/system/providers`
+- `GET /api/v1/system/llm-configs`
+- `POST /api/v1/system/llm-configs`
+- `POST /api/v1/system/llm-configs/test`
+- `PUT /api/v1/system/llm-configs/{id}`
+- `DELETE /api/v1/system/llm-configs/{id}`
+
+连通性检测请求示例：
+
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-***",
+  "modelName": "gpt-4o-mini"
+}
+```
+
+对于 `local`、`community`，需要改为传入 `apiBase`。
+
+连通性检测响应示例：
+
+```json
+{
+  "ok": true,
+  "detail": "Successfully connected to provider 'openai' with model 'gpt-4o-mini'."
+}
+```
+
+若参数校验失败会返回 `400`；若上游模型不可达、鉴权失败或响应异常，则接口仍返回 `200`，但 `ok` 为 `false`，并在 `detail` 中附带可读原因。
+
+## 8. 测试
+
 当前单测覆盖：
 
 - 配置加载
@@ -220,6 +256,7 @@ SQLite 表：
 - 上传去重
 - 直接文本创建
 - 聊天契约与会话持久化
+- 模型配置 CRUD 与连通性检测
 
 运行方式：
 

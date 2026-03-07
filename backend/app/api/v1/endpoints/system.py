@@ -7,6 +7,8 @@ from app.schemas.system import (
     LLMConfigCreateRequest,
     LLMConfigItem,
     LLMConfigListResponse,
+    LLMConfigTestRequest,
+    LLMConfigTestResponse,
     LLMConfigUpdateRequest,
     ProviderListResponse,
 )
@@ -46,6 +48,14 @@ def create_llm_config(
     service: SystemService = Depends(get_system_service),
 ) -> LLMConfigItem:
     return service.create_llm_config(payload)
+
+
+@router.post("/llm-configs/test", response_model=LLMConfigTestResponse)
+def test_llm_config(
+    payload: LLMConfigTestRequest,
+    service: SystemService = Depends(get_system_service),
+) -> LLMConfigTestResponse:
+    return service.test_llm_config(payload)
 
 
 @router.put("/llm-configs/{config_id}", response_model=LLMConfigItem)

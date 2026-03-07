@@ -15,8 +15,22 @@ class LLMGateway(Protocol):
         recent_messages: list[dict],
     ) -> str: ...
 
+    def test_connection(self, *, config: dict) -> str: ...
+
 
 class HTTPModelGateway:
+    def test_connection(self, *, config: dict) -> str:
+        probe_config = dict(config)
+        probe_config["temperature"] = float(config.get("temperature", 0))
+        probe_config["top_p"] = float(config.get("top_p", 1))
+        probe_config["max_tokens"] = int(config.get("max_tokens", 32))
+        return self.generate(
+            config=probe_config,
+            message="请仅回复 OK。",
+            relevant_chunks=[],
+            recent_messages=[],
+        )
+
     def generate(
         self,
         *,

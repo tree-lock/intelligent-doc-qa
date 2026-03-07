@@ -7,8 +7,11 @@ from app.repositories.system_repo import SystemRepository
 from app.schemas.system import (
     LLMConfigCreateRequest,
     LLMConfigItem,
+    LLMConfigTestRequest,
+    LLMConfigTestResponse,
     LLMConfigUpdateRequest,
 )
+from app.services.llm_gateway import HTTPModelGateway, LLMGateway
 
 
 def utc_now_iso() -> str:
@@ -16,9 +19,15 @@ def utc_now_iso() -> str:
 
 
 class SystemService:
-    def __init__(self, repository: SystemRepository, settings: Settings) -> None:
+    def __init__(
+        self,
+        repository: SystemRepository,
+        settings: Settings,
+        llm_gateway: LLMGateway | None = None,
+    ) -> None:
         self.repository = repository
         self.settings = settings
+        self.llm_gateway = llm_gateway or HTTPModelGateway()
 
     def list_providers(self) -> list[str]:
         return self.settings.system_providers
@@ -137,6 +146,21 @@ class SystemService:
             )
         self.repository.delete_llm_config(config_id)
 
+    def test_llm_config(self, payload: LLMConfigTestRequest) -> LLMConfigTestResponse:
+        normalized = self._normalize_test_payload(payload)
+        try:
+            self.llm_gateway.test_connection(config=normalized)
+        except HTTPException as exc:
+            return LLMConfigTestResponse(ok=False, detail=str(exc.detail))
+
+        return LLMConfigTestResponse(
+            ok=True,
+            detail=(
+                f"Successfully connected to provider '{normalized['provider']}' "
+                f"with model '{normalized['model_name']}'."
+            ),
+        )
+
     def _validate_and_normalize(
         self,
         *,
@@ -202,6 +226,20 @@ class SystemService:
             "max_tokens": int(max_tokens),
             "is_default": bool(is_default),
         }
+
+    def _normalize_test_payload(self, payload: LLMConfigTestRequest) -> dict:
+        return self._validate_and_normalize(
+            name="connectivity-test",
+            provider=payload.provider,
+            api_key=payload.api_key,
+            api_base=payload.api_base,
+            model_name=payload.model_name,
+            temperature=0,
+            top_p=1,
+            max_tokens=32,
+            existing=None,
+            is_default=False,
+        )
 
     def _to_item(self, row: dict) -> LLMConfigItem:
         return LLMConfigItem(

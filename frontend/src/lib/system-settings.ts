@@ -27,6 +27,16 @@ export type LLMConfigCreateInput = {
 
 export type LLMConfigUpdateInput = Partial<LLMConfigCreateInput>;
 
+export type LLMConfigConnectivityTestInput = Pick<
+  LLMConfigCreateInput,
+  "provider" | "apiKey" | "apiBase" | "modelName"
+>;
+
+export type LLMConfigConnectivityTestResult = {
+  ok: boolean;
+  detail: string | null;
+};
+
 export type LLMConfigDraft = {
   name: string;
   provider: string;

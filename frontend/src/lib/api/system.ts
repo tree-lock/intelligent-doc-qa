@@ -1,5 +1,7 @@
 import type {
   LLMConfig,
+  LLMConfigConnectivityTestInput,
+  LLMConfigConnectivityTestResult,
   LLMConfigCreateInput,
   LLMConfigUpdateInput,
 } from "../system-settings";
@@ -56,4 +58,19 @@ export async function fetchProviders(): Promise<string[]> {
     "/api/v1/system/providers",
   );
   return response.items;
+}
+
+export async function testLLMConfigConnectivity(
+  payload: LLMConfigConnectivityTestInput,
+): Promise<LLMConfigConnectivityTestResult> {
+  return apiFetch<LLMConfigConnectivityTestResult>(
+    "/api/v1/system/llm-configs/test",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
 }

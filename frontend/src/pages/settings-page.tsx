@@ -10,18 +10,23 @@ export function SettingsPage() {
     selectedConfigId,
     draft,
     saveStatus,
+    testStatus,
     errorMessage,
+    testMessage,
     fieldErrors,
     selectConfig,
     createNew,
     setField,
     save,
+    testConnection,
     remove,
     setAsDefault,
     reset,
   } = useSystemSettings();
 
   const isSaving = saveStatus === "saving";
+  const isTesting = testStatus === "testing";
+  const isBusy = isSaving || isTesting;
 
   const handleSave = async () => {
     await save();
@@ -35,11 +40,22 @@ export function SettingsPage() {
     await setAsDefault();
   };
 
+  const handleTestConnection = async () => {
+    await testConnection();
+  };
+
   const saveStatusText =
     saveStatus === "success"
       ? "模型配置已保存到后端"
       : saveStatus === "error"
         ? (errorMessage ?? "保存失败，请检查必填项和参数范围")
+        : null;
+
+  const testStatusText =
+    testStatus === "success"
+      ? (testMessage ?? "模型连通性检测成功")
+      : testStatus === "error"
+        ? (testMessage ?? "模型连通性检测失败")
         : null;
 
   return (
@@ -197,13 +213,22 @@ export function SettingsPage() {
                 {saveStatusText}
               </span>
             ) : null}
+            {!saveStatusText && testStatusText ? (
+              <span
+                className={
+                  testStatus === "success" ? "text-emerald-600" : "text-red-600"
+                }
+              >
+                {testStatusText}
+              </span>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={reset}
-              disabled={isSaving}
+              disabled={isBusy}
               className="rounded-lg border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-accent"
             >
               重置
@@ -211,8 +236,17 @@ export function SettingsPage() {
             <Button
               type="button"
               variant="outline"
+              onClick={handleTestConnection}
+              disabled={isBusy}
+              className="rounded-lg border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-accent"
+            >
+              {isTesting ? "检测中..." : "测试连通性"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleSetDefault}
-              disabled={isSaving || !selectedConfigId}
+              disabled={isBusy || !selectedConfigId}
               className="rounded-lg border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-accent"
             >
               设为默认
@@ -221,7 +255,7 @@ export function SettingsPage() {
               type="button"
               variant="outline"
               onClick={handleDelete}
-              disabled={isSaving || !selectedConfigId}
+              disabled={isBusy || !selectedConfigId}
               className="rounded-lg border-red-200 px-4 py-2 text-sm text-red-600 transition hover:border-red-300 hover:bg-red-50"
             >
               删除
@@ -229,7 +263,7 @@ export function SettingsPage() {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isBusy}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             >
               {isSaving ? "保存中..." : "保存配置"}

@@ -6,11 +6,13 @@ import {
   deleteLLMConfig,
   fetchLLMConfigs,
   fetchProviders,
+  testLLMConfigConnectivity,
   updateLLMConfig,
 } from "../lib/api/system";
 import {
   DEFAULT_LLM_CONFIG_DRAFT,
   type LLMConfig,
+  type LLMConfigConnectivityTestInput,
   type LLMConfigCreateInput,
   type LLMConfigDraft,
   type LLMConfigUpdateInput,
@@ -23,6 +25,7 @@ const EMPTY_CONFIGS: LLMConfig[] = [];
 const EMPTY_PROVIDERS: string[] = [];
 
 export type SaveStatus = "idle" | "saving" | "success" | "error";
+export type ConnectionTestStatus = "idle" | "testing" | "success" | "error";
 
 export type SettingsFieldErrors = Partial<Record<keyof LLMConfigDraft, string>>;
 
@@ -82,6 +85,44 @@ function validateSettings(settings: LLMConfigDraft) {
   return errors;
 }
 
+function validateConnectivitySettings(settings: LLMConfigDraft) {
+  const errors: SettingsFieldErrors = {};
+
+  if (!settings.provider.trim()) {
+    errors.provider = "Provider 不能为空";
+  }
+  if (!settings.modelName.trim()) {
+    errors.modelName = "模型名称不能为空";
+  }
+  if (
+    ["openai", "claude"].includes(settings.provider.trim().toLowerCase()) &&
+    !settings.apiKey.trim() &&
+    !settings.hasApiKey
+  ) {
+    errors.apiKey = "API Key 不能为空";
+  }
+  if (
+    ["local", "community"].includes(settings.provider.trim().toLowerCase()) &&
+    !settings.apiBase.trim()
+  ) {
+    errors.apiBase = "本地或社区模型必须填写 API Base";
+  }
+
+  return errors;
+}
+
+function normalizeDraft(draft: LLMConfigDraft): LLMConfigDraft {
+  return {
+    ...draft,
+    name: draft.name.trim(),
+    provider: draft.provider.trim().toLowerCase(),
+    apiKey: draft.apiKey.trim(),
+    apiBase: draft.apiBase.trim(),
+    modelName: draft.modelName.trim(),
+    maxTokens: Math.round(draft.maxTokens),
+  };
+}
+
 export function useSystemSettings() {
   const queryClient = useQueryClient();
   const { data: configs = EMPTY_CONFIGS } = useQuery({
@@ -100,8 +141,10 @@ export function useSystemSettings() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [draft, setDraft] = useState<LLMConfigDraft>(DEFAULT_LLM_CONFIG_DRAFT);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [testStatus, setTestStatus] = useState<ConnectionTestStatus>("idle");
   const [fieldErrors, setFieldErrors] = useState<SettingsFieldErrors>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [testMessage, setTestMessage] = useState<string | null>(null);
 
   const selectedConfig = useMemo(
     () => configs.find((item) => item.id === selectedConfigId) ?? null,
@@ -109,11 +152,6 @@ export function useSystemSettings() {
   );
 
   const firstProvider = providers[0] ?? DEFAULT_LLM_CONFIG_DRAFT.provider;
-  const configIds = useMemo(
-    () => configs.map((c) => c.id).join(","),
-    [configs],
-  );
-  const configsLength = configs.length;
   const configsRef = useRef(configs);
   configsRef.current = configs;
 
@@ -144,13 +182,7 @@ export function useSystemSettings() {
       setSelectedConfigId(nextSelected.id);
       setDraft(toLLMConfigDraft(nextSelected));
     }
-  }, [
-    configsLength,
-    configIds,
-    firstProvider,
-    selectedConfigId,
-    isCreatingNew,
-  ]);
+  }, [firstProvider, selectedConfigId, isCreatingNew]);
 
   const createMutation = useMutation({
     mutationFn: (payload: LLMConfigCreateInput) => createLLMConfig(payload),
@@ -166,6 +198,10 @@ export function useSystemSettings() {
   });
   const deleteMutation = useMutation({
     mutationFn: (configId: string) => deleteLLMConfig(configId),
+  });
+  const testMutation = useMutation({
+    mutationFn: (payload: LLMConfigConnectivityTestInput) =>
+      testLLMConfigConnectivity(payload),
   });
 
   const setField = <K extends keyof LLMConfigDraft>(
@@ -185,6 +221,12 @@ export function useSystemSettings() {
     if (errorMessage) {
       setErrorMessage(null);
     }
+    if (testStatus !== "idle") {
+      setTestStatus("idle");
+    }
+    if (testMessage) {
+      setTestMessage(null);
+    }
   };
 
   const selectConfig = (configId: string) => {
@@ -198,6 +240,8 @@ export function useSystemSettings() {
     setFieldErrors({});
     setSaveStatus("idle");
     setErrorMessage(null);
+    setTestStatus("idle");
+    setTestMessage(null);
   };
 
   const createNew = () => {
@@ -210,21 +254,14 @@ export function useSystemSettings() {
     setFieldErrors({});
     setSaveStatus("idle");
     setErrorMessage(null);
+    setTestStatus("idle");
+    setTestMessage(null);
   };
 
   const save = async () => {
     setSaveStatus("saving");
     setErrorMessage(null);
-
-    const trimmedSettings: LLMConfigDraft = {
-      ...draft,
-      name: draft.name.trim(),
-      provider: draft.provider.trim().toLowerCase(),
-      apiKey: draft.apiKey.trim(),
-      apiBase: draft.apiBase.trim(),
-      modelName: draft.modelName.trim(),
-      maxTokens: Math.round(draft.maxTokens),
-    };
+    const trimmedSettings = normalizeDraft(draft);
 
     const errors = validateSettings(trimmedSettings);
     setFieldErrors(errors);
@@ -254,6 +291,43 @@ export function useSystemSettings() {
       const message = error instanceof Error ? error.message : "保存失败";
       setErrorMessage(message);
       setSaveStatus("error");
+      toast.error(message, { duration: Infinity });
+      return false;
+    }
+  };
+
+  const testConnection = async () => {
+    setTestStatus("testing");
+    setTestMessage(null);
+
+    const trimmedSettings = normalizeDraft(draft);
+    const connectivityErrors = validateConnectivitySettings(trimmedSettings);
+    setFieldErrors((previous) => ({
+      ...previous,
+      provider: connectivityErrors.provider,
+      modelName: connectivityErrors.modelName,
+      apiKey: connectivityErrors.apiKey,
+      apiBase: connectivityErrors.apiBase,
+    }));
+    if (Object.keys(connectivityErrors).length > 0) {
+      setTestStatus("error");
+      setTestMessage("请先补全模型检测所需字段");
+      return false;
+    }
+
+    try {
+      const result = await testMutation.mutateAsync(
+        toConnectivityPayload(trimmedSettings),
+      );
+      setTestStatus(result.ok ? "success" : "error");
+      setTestMessage(
+        result.detail ?? (result.ok ? "连通性检测成功" : "连通性检测失败"),
+      );
+      return result.ok;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "连通性检测失败";
+      setTestStatus("error");
+      setTestMessage(message);
       toast.error(message, { duration: Infinity });
       return false;
     }
@@ -342,6 +416,8 @@ export function useSystemSettings() {
     setFieldErrors({});
     setSaveStatus("idle");
     setErrorMessage(null);
+    setTestStatus("idle");
+    setTestMessage(null);
   };
 
   return {
@@ -351,12 +427,15 @@ export function useSystemSettings() {
     selectedConfig,
     draft,
     saveStatus,
+    testStatus,
     errorMessage,
+    testMessage,
     fieldErrors,
     selectConfig,
     createNew,
     setField,
     save,
+    testConnection,
     remove,
     setAsDefault,
     reset,
@@ -364,6 +443,7 @@ export function useSystemSettings() {
 }
 
 export { validateSettings };
+export { validateConnectivitySettings };
 
 function toConfigPayload(
   draft: LLMConfigDraft,
@@ -385,6 +465,17 @@ function toConfigPayload(
     payload.apiKey = "";
   }
   return payload;
+}
+
+function toConnectivityPayload(
+  draft: LLMConfigDraft,
+): LLMConfigConnectivityTestInput {
+  return {
+    provider: draft.provider,
+    apiBase: draft.apiBase || undefined,
+    modelName: draft.modelName,
+    ...(draft.apiKey ? { apiKey: draft.apiKey } : {}),
+  };
 }
 
 function upsertConfig(configs: LLMConfig[], nextConfig: LLMConfig) {
