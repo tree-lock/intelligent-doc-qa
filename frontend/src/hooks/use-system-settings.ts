@@ -204,6 +204,14 @@ export function useSystemSettings() {
       testLLMConfigConnectivity(payload),
   });
 
+  const clearMessages = () => {
+    setFieldErrors({});
+    setSaveStatus("idle");
+    setErrorMessage(null);
+    setTestStatus("idle");
+    setTestMessage(null);
+  };
+
   const setField = <K extends keyof LLMConfigDraft>(
     field: K,
     value: LLMConfigDraft[K],
@@ -229,6 +237,11 @@ export function useSystemSettings() {
     }
   };
 
+  const replaceDraft = (nextDraft: LLMConfigDraft) => {
+    setDraft(nextDraft);
+    clearMessages();
+  };
+
   const selectConfig = (configId: string) => {
     const config = configs.find((item) => item.id === configId);
     if (!config) {
@@ -237,11 +250,7 @@ export function useSystemSettings() {
     setIsCreatingNew(false);
     setSelectedConfigId(config.id);
     setDraft(toLLMConfigDraft(config));
-    setFieldErrors({});
-    setSaveStatus("idle");
-    setErrorMessage(null);
-    setTestStatus("idle");
-    setTestMessage(null);
+    clearMessages();
   };
 
   const createNew = () => {
@@ -251,17 +260,13 @@ export function useSystemSettings() {
       ...DEFAULT_LLM_CONFIG_DRAFT,
       provider: providers[0] ?? DEFAULT_LLM_CONFIG_DRAFT.provider,
     });
-    setFieldErrors({});
-    setSaveStatus("idle");
-    setErrorMessage(null);
-    setTestStatus("idle");
-    setTestMessage(null);
+    clearMessages();
   };
 
-  const save = async () => {
+  const save = async (nextDraft?: LLMConfigDraft) => {
     setSaveStatus("saving");
     setErrorMessage(null);
-    const trimmedSettings = normalizeDraft(draft);
+    const trimmedSettings = normalizeDraft(nextDraft ?? draft);
 
     const errors = validateSettings(trimmedSettings);
     setFieldErrors(errors);
@@ -296,11 +301,11 @@ export function useSystemSettings() {
     }
   };
 
-  const testConnection = async () => {
+  const testConnection = async (nextDraft?: LLMConfigDraft) => {
     setTestStatus("testing");
     setTestMessage(null);
 
-    const trimmedSettings = normalizeDraft(draft);
+    const trimmedSettings = normalizeDraft(nextDraft ?? draft);
     const connectivityErrors = validateConnectivitySettings(trimmedSettings);
     setFieldErrors((previous) => ({
       ...previous,
@@ -413,11 +418,7 @@ export function useSystemSettings() {
         provider: providers[0] ?? DEFAULT_LLM_CONFIG_DRAFT.provider,
       });
     }
-    setFieldErrors({});
-    setSaveStatus("idle");
-    setErrorMessage(null);
-    setTestStatus("idle");
-    setTestMessage(null);
+    clearMessages();
   };
 
   return {
@@ -433,6 +434,7 @@ export function useSystemSettings() {
     fieldErrors,
     selectConfig,
     createNew,
+    replaceDraft,
     setField,
     save,
     testConnection,

@@ -16,7 +16,10 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           // React 全家桶单独 chunk，利于缓存与主包瘦身
-          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) {
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/")
+          ) {
             return "vendor-react";
           }
           if (id.includes("node_modules/react-router-dom/")) {

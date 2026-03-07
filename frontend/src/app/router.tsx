@@ -13,11 +13,11 @@ import { APP_ROUTE_PATH } from "./route-config";
 const lazyPage = (fn: () => Promise<{ default: ComponentType }>) => lazy(fn);
 
 const ChatRoutePage = lazyPage(() => import("../pages/chat-route-page"));
-const DocumentsRoutePage = lazyPage(() =>
-  import("../pages/documents-route-page"),
+const DocumentsRoutePage = lazyPage(
+  () => import("../pages/documents-route-page"),
 );
-const SettingsRoutePage = lazyPage(() =>
-  import("../pages/settings-route-page"),
+const SettingsRoutePage = lazyPage(
+  () => import("../pages/settings-route-page"),
 );
 
 const routeErrorElement = <RouteErrorFallback />;
