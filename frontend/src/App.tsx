@@ -10,6 +10,7 @@ function App() {
   const {
     currentChatId,
     currentSession,
+    optimisticUserMessage,
     draftPendingDocuments,
     draftModelConfigId,
     onStartChat,
@@ -25,6 +26,7 @@ function App() {
       onStartChat,
       currentChatId,
       currentSession,
+      optimisticUserMessage,
       draftPendingDocuments,
       draftModelConfigId,
       onSendMessage,
@@ -36,6 +38,7 @@ function App() {
       onStartChat,
       currentChatId,
       currentSession,
+      optimisticUserMessage,
       draftPendingDocuments,
       draftModelConfigId,
       onSendMessage,

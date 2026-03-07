@@ -61,9 +61,7 @@ function validateSettings(settings: LLMConfigDraft) {
     errors.modelName = "模型名称不能为空";
   }
   if (
-    ["openai", "claude"].includes(
-      settings.provider.trim().toLowerCase(),
-    ) &&
+    ["openai", "claude"].includes(settings.provider.trim().toLowerCase()) &&
     !settings.apiKey.trim() &&
     !settings.hasApiKey
   ) {

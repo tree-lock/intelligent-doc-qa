@@ -49,7 +49,7 @@ export function ChatPage({
     useChatInput(onSendMessage, isSendingMessage);
 
   return (
-    <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-6xl grid-cols-12 gap-4">
+    <div className="mx-auto grid h-[calc(100vh-3.5rem)] min-w-0 max-w-6xl grid-cols-12 gap-4">
       <Suspense
         fallback={
           <div className="col-span-3">
@@ -75,7 +75,7 @@ export function ChatPage({
         />
       </Suspense>
 
-      <section className="col-span-9 flex flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+      <section className="col-span-9 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <header className="border-b border-slate-200 px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -107,7 +107,7 @@ export function ChatPage({
           </div>
         </header>
 
-        <MessageList messages={messages} />
+        <MessageList messages={messages} isSendingMessage={isSendingMessage} />
 
         <footer className="border-t border-slate-200 p-4">
           <ChatInput

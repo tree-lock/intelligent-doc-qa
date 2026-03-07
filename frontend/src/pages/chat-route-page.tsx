@@ -5,6 +5,7 @@ export function ChatRoutePage() {
   const {
     currentChatId,
     currentSession,
+    optimisticUserMessage,
     draftPendingDocuments,
     draftModelConfigId,
     onSendMessage,
@@ -13,10 +14,15 @@ export function ChatRoutePage() {
     onModelConfigChange,
   } = useAppRouteContext();
 
+  const messages = [
+    ...(currentSession?.messages ?? []),
+    ...(optimisticUserMessage ? [optimisticUserMessage] : []),
+  ];
+
   return (
     <ChatPage
       chatId={currentChatId}
-      messages={currentSession?.messages ?? []}
+      messages={messages}
       loadedDocuments={currentSession?.loadedDocuments ?? []}
       pendingDocuments={
         currentSession?.pendingDocuments ?? draftPendingDocuments

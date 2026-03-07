@@ -28,6 +28,8 @@ export function useAppChatState(
   const [draftPendingDocuments, setDraftPendingDocuments] = useState<
     DocumentItem[]
   >([]);
+  const [optimisticUserMessage, setOptimisticUserMessage] =
+    useState<ChatMessage | null>(null);
   const [draftModelConfigId, setDraftModelConfigId] = useState<
     string | undefined
   >();
@@ -87,99 +89,105 @@ export function useAppChatState(
         content,
       };
 
-      const currentDocuments =
-        currentChatId === NEW_CHAT_ID
-          ? draftPendingDocuments
-          : (() => {
-              if (!currentSession) {
-                return [] as DocumentItem[];
-              }
+      setOptimisticUserMessage(userMessage);
 
-              const documentMap = new Map<string, DocumentItem>();
-              for (const document of currentSession.loadedDocuments) {
-                documentMap.set(document.id, document);
-              }
-              for (const document of currentSession.pendingDocuments) {
-                if (!documentMap.has(document.id)) {
+      try {
+        const currentDocuments =
+          currentChatId === NEW_CHAT_ID
+            ? draftPendingDocuments
+            : (() => {
+                if (!currentSession) {
+                  return [] as DocumentItem[];
+                }
+
+                const documentMap = new Map<string, DocumentItem>();
+                for (const document of currentSession.loadedDocuments) {
                   documentMap.set(document.id, document);
                 }
-              }
-              return Array.from(documentMap.values());
-            })();
+                for (const document of currentSession.pendingDocuments) {
+                  if (!documentMap.has(document.id)) {
+                    documentMap.set(document.id, document);
+                  }
+                }
+                return Array.from(documentMap.values());
+              })();
 
-      const assistantReply = await sendChatMessage({
-        message: content,
-        documents: currentDocuments,
-        sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
-        modelConfigId:
-          currentChatId === NEW_CHAT_ID
-            ? draftModelConfigId
-            : currentSession?.currentModelConfigId,
-      });
+        const assistantReply = await sendChatMessage({
+          message: content,
+          documents: currentDocuments,
+          sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
+          modelConfigId:
+            currentChatId === NEW_CHAT_ID
+              ? draftModelConfigId
+              : currentSession?.currentModelConfigId,
+        });
 
-      const assistantMessage: ChatMessage = {
-        id: `m-${Date.now()}-assistant`,
-        role: "assistant",
-        content: assistantReply.content,
-      };
-
-      if (currentChatId === NEW_CHAT_ID) {
-        const newChatId = assistantReply.sessionId ?? createChatId();
-        const newSession: ChatSession = {
-          id: newChatId,
-          title: createSessionTitle(content),
-          messages: [userMessage, assistantMessage],
-          loadedDocuments: draftPendingDocuments,
-          pendingDocuments: [],
-          currentModelConfigId:
-            assistantReply.modelConfigId ?? selectedModel?.id,
-          currentProvider:
-            assistantReply.provider ?? selectedModel?.provider ?? "",
-          currentModelName:
-            assistantReply.modelName ?? selectedModel?.modelName ?? "",
-          createdAt: now,
-          updatedAt: now,
+        const assistantMessage: ChatMessage = {
+          id: `m-${Date.now()}-assistant`,
+          role: "assistant",
+          content: assistantReply.content,
         };
 
-        setSessions((prev) =>
-          sortSessionsByUpdatedAtDesc([newSession, ...prev]),
-        );
-        navigate(getChatRoutePath(newChatId));
-        return;
-      }
+        if (currentChatId === NEW_CHAT_ID) {
+          const newChatId = assistantReply.sessionId ?? createChatId();
+          const newSession: ChatSession = {
+            id: newChatId,
+            title: createSessionTitle(content),
+            messages: [userMessage, assistantMessage],
+            loadedDocuments: draftPendingDocuments,
+            pendingDocuments: [],
+            currentModelConfigId:
+              assistantReply.modelConfigId ?? selectedModel?.id,
+            currentProvider:
+              assistantReply.provider ?? selectedModel?.provider ?? "",
+            currentModelName:
+              assistantReply.modelName ?? selectedModel?.modelName ?? "",
+            createdAt: now,
+            updatedAt: now,
+          };
 
-      const targetSessionId = assistantReply.sessionId ?? currentChatId;
-      setSessions((prev) =>
-        sortSessionsByUpdatedAtDesc(
-          prev.map((session) => {
-            if (session.id !== targetSessionId) {
-              return session;
-            }
-            return {
-              ...session,
-              loadedDocuments: [
-                ...session.loadedDocuments,
-                ...session.pendingDocuments.filter(
-                  (pendingDocument) =>
-                    !session.loadedDocuments.some(
-                      (loadedDocument) =>
-                        loadedDocument.id === pendingDocument.id,
-                    ),
-                ),
-              ],
-              pendingDocuments: [],
-              messages: [...session.messages, userMessage, assistantMessage],
-              currentModelConfigId:
-                assistantReply.modelConfigId ?? session.currentModelConfigId,
-              currentProvider:
-                assistantReply.provider ?? session.currentProvider,
-              currentModelName:
-                assistantReply.modelName ?? session.currentModelName,
-              updatedAt: now,
-            };
-          }),
-        ),
-      );
+          setSessions((prev) =>
+            sortSessionsByUpdatedAtDesc([newSession, ...prev]),
+          );
+          navigate(getChatRoutePath(newChatId));
+          return;
+        }
+
+        const targetSessionId = assistantReply.sessionId ?? currentChatId;
+        setSessions((prev) =>
+          sortSessionsByUpdatedAtDesc(
+            prev.map((session) => {
+              if (session.id !== targetSessionId) {
+                return session;
+              }
+              return {
+                ...session,
+                loadedDocuments: [
+                  ...session.loadedDocuments,
+                  ...session.pendingDocuments.filter(
+                    (pendingDocument) =>
+                      !session.loadedDocuments.some(
+                        (loadedDocument) =>
+                          loadedDocument.id === pendingDocument.id,
+                      ),
+                  ),
+                ],
+                pendingDocuments: [],
+                messages: [...session.messages, userMessage, assistantMessage],
+                currentModelConfigId:
+                  assistantReply.modelConfigId ?? session.currentModelConfigId,
+                currentProvider:
+                  assistantReply.provider ?? session.currentProvider,
+                currentModelName:
+                  assistantReply.modelName ?? session.currentModelName,
+                updatedAt: now,
+              };
+            }),
+          ),
+        );
+      } finally {
+        setOptimisticUserMessage(null);
+      }
     },
     [
       currentChatId,
@@ -254,6 +262,7 @@ export function useAppChatState(
   return {
     currentChatId,
     currentSession,
+    optimisticUserMessage,
     draftPendingDocuments,
     draftModelConfigId,
     onStartChat,

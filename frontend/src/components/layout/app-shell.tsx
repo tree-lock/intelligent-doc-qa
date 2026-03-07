@@ -125,7 +125,7 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="flex-1 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.12),transparent_45%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] px-6 py-7">
+        <main className="min-w-0 flex-1 overflow-x-hidden bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.12),transparent_45%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] px-6 py-7">
           {children}
         </main>
       </div>
