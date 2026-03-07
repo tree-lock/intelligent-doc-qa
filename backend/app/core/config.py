@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     api_base_required_providers: list[str] = ["local", "community"]
     local_provider_name: str = "local"
 
+    use_vector_search: bool = True
+    chroma_persist_path: str = "./data/chroma"
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, UploadFile, status
 
@@ -6,15 +7,24 @@ from app.core.config import Settings
 from app.repositories.document_repo import DocumentRepository
 from app.schemas.documents import DocumentCreateRequest, DocumentItem
 
+if TYPE_CHECKING:
+    from app.services.vector_store_service import VectorStoreService
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
 class DocumentService:
-    def __init__(self, repository: DocumentRepository, settings: Settings) -> None:
+    def __init__(
+        self,
+        repository: DocumentRepository,
+        settings: Settings,
+        vector_store: "VectorStoreService | None" = None,
+    ) -> None:
         self.repository = repository
         self.settings = settings
+        self.vector_store = vector_store
 
     def list_documents(self) -> list[DocumentItem]:
         return [self._to_document_item(row) for row in self.repository.list_documents()]
@@ -44,7 +54,14 @@ class DocumentService:
             status="ready",
             updated_at=utc_now_iso(),
         )
-        self.repository.replace_chunks(created["id"], self.chunk_plain_text(normalized_text))
+        chunks = self.chunk_plain_text(normalized_text)
+        self.repository.replace_chunks(created["id"], chunks)
+        self._sync_vector_chunks(
+            document_id=created["id"],
+            name=name,
+            title=title,
+            chunks=chunks,
+        )
         return self._to_document_item(created)
 
     async def upload_documents(self, files: list[UploadFile]) -> list[DocumentItem]:
@@ -88,10 +105,19 @@ class DocumentService:
             status="ready",
             updated_at=utc_now_iso(),
         )
-        self.repository.replace_chunks(created["id"], self.chunk_plain_text(plain_text))
+        chunks = self.chunk_plain_text(plain_text)
+        self.repository.replace_chunks(created["id"], chunks)
+        self._sync_vector_chunks(
+            document_id=created["id"],
+            name=filename,
+            title=filename,
+            chunks=chunks,
+        )
         return self._to_document_item(created)
 
     def delete_documents(self, ids: list[str]) -> None:
+        if self.vector_store is not None and ids:
+            self.vector_store.delete_by_document_ids(ids)
         self.repository.delete_documents(ids)
 
     def normalize_plain_text(self, text: str) -> str:
@@ -125,6 +151,23 @@ class DocumentService:
                 break
             start += step
         return chunks
+
+    def _sync_vector_chunks(
+        self,
+        *,
+        document_id: str,
+        name: str,
+        title: str,
+        chunks: list[str],
+    ) -> None:
+        if self.vector_store is None:
+            return
+        self.vector_store.add_chunks(
+            document_id=document_id,
+            name=name,
+            title=title,
+            chunks=chunks,
+        )
 
     def _to_document_item(self, row: dict) -> DocumentItem:
         return DocumentItem(

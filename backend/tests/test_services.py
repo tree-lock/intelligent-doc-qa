@@ -39,6 +39,60 @@ class FakeLLMGateway(LLMGateway):
         )
 
 
+class FakeVectorStore:
+    def __init__(self) -> None:
+        self.added_chunks: list[dict] = []
+        self.deleted_document_ids: list[str] = []
+        self.search_calls: list[dict] = []
+
+    def add_chunks(
+        self,
+        *,
+        document_id: str,
+        name: str,
+        title: str,
+        chunks: list[str],
+    ) -> None:
+        self.added_chunks.append(
+            {
+                "document_id": document_id,
+                "name": name,
+                "title": title,
+                "chunks": chunks,
+            }
+        )
+
+    def delete_by_document_ids(self, document_ids: list[str]) -> None:
+        self.deleted_document_ids.extend(document_ids)
+
+    def has_documents(self, document_ids: list[str]) -> bool:
+        return bool(document_ids)
+
+    def similarity_search(
+        self,
+        *,
+        query: str,
+        document_ids: list[str],
+        k: int = 5,
+    ) -> list[dict]:
+        self.search_calls.append(
+            {
+                "query": query,
+                "document_ids": document_ids,
+                "k": k,
+            }
+        )
+        return [
+            {
+                "content": "这是来自向量检索的语义命中片段。",
+                "document_id": document_ids[0],
+                "name": "vector.txt",
+                "title": "Vector Result",
+                "chunk_index": 0,
+            }
+        ]
+
+
 class BackendServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -46,6 +100,7 @@ class BackendServiceTests(unittest.TestCase):
         os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{self.database_path}"
         os.environ["CHUNK_SIZE"] = "24"
         os.environ["CHUNK_OVERLAP"] = "4"
+        os.environ["USE_VECTOR_SEARCH"] = "false"
         get_settings.cache_clear()
 
         settings = get_settings()
@@ -69,6 +124,7 @@ class BackendServiceTests(unittest.TestCase):
         os.environ.pop("DATABASE_URL", None)
         os.environ.pop("CHUNK_SIZE", None)
         os.environ.pop("CHUNK_OVERLAP", None)
+        os.environ.pop("USE_VECTOR_SEARCH", None)
         self.temp_dir.cleanup()
 
     def test_settings_load_from_environment(self) -> None:
@@ -109,6 +165,30 @@ class BackendServiceTests(unittest.TestCase):
         self.assertEqual(document.title, "Manual note")
         self.assertEqual(document.plain_text, "line1\nline2")
         self.assertEqual(document.status, "ready")
+
+    def test_document_service_syncs_vector_chunks_on_create_and_delete(self) -> None:
+        vector_store = FakeVectorStore()
+        service = DocumentService(
+            self.document_repository,
+            get_settings(),
+            vector_store=vector_store,
+        )
+
+        document = service.create_document_from_text(
+            DocumentCreateRequest(
+                title="Vector note",
+                plainText="第一段内容。第二段内容。",
+                type="txt",
+            )
+        )
+
+        self.assertEqual(len(vector_store.added_chunks), 1)
+        self.assertEqual(vector_store.added_chunks[0]["document_id"], document.id)
+        self.assertEqual(vector_store.added_chunks[0]["title"], "Vector note")
+        self.assertTrue(vector_store.added_chunks[0]["chunks"])
+
+        service.delete_documents([document.id])
+        self.assertEqual(vector_store.deleted_document_ids, [document.id])
 
     def test_chat_completion_persists_session_and_matches_contract(self) -> None:
         document = self.document_service.create_document_from_text(
@@ -257,6 +337,35 @@ class BackendServiceTests(unittest.TestCase):
         self.assertEqual(session["current_model_config_id"], config.id)
         self.assertIn(document.name, session["loaded_documents"])
         self.assertEqual(response.provider, "claude")
+
+    def test_chat_prefers_vector_search_when_available(self) -> None:
+        document = self.document_service.create_document_from_text(
+            DocumentCreateRequest(
+                title="Semantic note",
+                plainText="这是一段普通文本，不包含特别的关键词。",
+                type="txt",
+            )
+        )
+        vector_store = FakeVectorStore()
+        chat_service = ChatService(
+            chat_repository=self.chat_repository,
+            document_repository=self.document_repository,
+            rag_service=RAGService(vector_store=vector_store),
+            system_repository=self.system_repository,
+            llm_gateway=FakeLLMGateway(),
+        )
+
+        response = chat_service.create_completion(
+            ChatCompletionRequest(
+                message="帮我做语义检索测试",
+                documents=[document],
+            )
+        )
+
+        self.assertEqual(len(vector_store.search_calls), 1)
+        self.assertEqual(vector_store.search_calls[0]["document_ids"], [document.id])
+        self.assertIn("Vector Result", response.references)
+        self.assertIn("语义命中片段", response.content)
 
     def test_chat_completion_endpoint_contract(self) -> None:
         document = self.document_service.create_document_from_text(

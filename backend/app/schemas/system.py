@@ -52,3 +52,19 @@ class LLMConfigUpdateRequest(BaseModel):
     is_default: bool | None = Field(default=None, alias="isDefault")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class LLMConfigTestRequest(BaseModel):
+    """Minimal config for connectivity test (no save)."""
+
+    provider: str = Field(min_length=1)
+    api_key: str | None = Field(default=None, alias="apiKey")
+    api_base: str | None = Field(default=None, alias="apiBase")
+    model_name: str = Field(alias="modelName", min_length=1)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class LLMConfigTestResponse(BaseModel):
+    ok: bool
+    detail: str | None = None

@@ -9,6 +9,7 @@ from app.schemas.documents import (
     DocumentItem,
 )
 from app.services.document_service import DocumentService
+from app.services.vector_store_service import get_vector_store_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -17,7 +18,12 @@ def get_document_service() -> DocumentService:
     settings = get_settings()
     database = Database(settings.database_url)
     repository = DocumentRepository(database)
-    return DocumentService(repository, settings)
+    vector_store = get_vector_store_service(
+        enabled=settings.use_vector_search,
+        persist_directory=settings.chroma_persist_path,
+        embedding_model=settings.embedding_model,
+    )
+    return DocumentService(repository, settings, vector_store=vector_store)
 
 
 @router.get("", response_model=list[DocumentItem])

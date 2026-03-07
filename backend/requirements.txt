@@ -5,7 +5,9 @@ python-dotenv
 python-multipart
 langchain
 langchain-openai
+langchain-community
+chromadb
+sentence-transformers
 sqlalchemy
 aiosqlite
-langchain-community
 sqlite-vec

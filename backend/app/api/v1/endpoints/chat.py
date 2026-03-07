@@ -13,6 +13,7 @@ from app.schemas.chat import (
 from app.services.chat_session_service import ChatSessionService
 from app.services.chat_service import ChatService
 from app.services.rag_service import RAGService
+from app.services.vector_store_service import get_vector_store_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -20,10 +21,15 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 def get_chat_service() -> ChatService:
     settings = get_settings()
     database = Database(settings.database_url)
+    vector_store = get_vector_store_service(
+        enabled=settings.use_vector_search,
+        persist_directory=settings.chroma_persist_path,
+        embedding_model=settings.embedding_model,
+    )
     return ChatService(
         chat_repository=ChatRepository(database),
         document_repository=DocumentRepository(database),
-        rag_service=RAGService(),
+        rag_service=RAGService(vector_store=vector_store),
         system_repository=SystemRepository(database),
     )
 

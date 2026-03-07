@@ -57,6 +57,7 @@ class ChatService:
         relevant_chunks = self.rag_service.select_relevant_chunks(
             message=payload.message,
             chunks=selected_chunks,
+            document_ids=[document.id for document in payload.documents],
         )
         references = self._collect_references(relevant_chunks)
         selected_model_config = self._resolve_llm_config(payload.model_config_id)

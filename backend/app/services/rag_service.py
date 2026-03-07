@@ -1,5 +1,8 @@
 import re
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from app.services.vector_store_service import VectorStoreService
 
 TOKEN_PATTERN = re.compile(r"[0-9A-Za-z\u4e00-\u9fff]+")
 
@@ -9,7 +12,38 @@ def tokenize(text: str) -> list[str]:
 
 
 class RAGService:
+    def __init__(self, vector_store: "VectorStoreService | None" = None) -> None:
+        self._vector_store = vector_store
+
     def select_relevant_chunks(
+        self,
+        *,
+        message: str,
+        chunks: list[dict],
+        document_ids: list[str] | None = None,
+        limit: int = 5,
+    ) -> list[dict]:
+        """Select relevant chunks using vector similarity when available, else keyword matching."""
+        if not chunks and not document_ids:
+            return []
+        if (
+            self._vector_store is not None
+            and document_ids
+            and self._vector_store.has_documents(document_ids)
+        ):
+            try:
+                vector_results = self._vector_store.similarity_search(
+                    query=message,
+                    document_ids=document_ids,
+                    k=limit,
+                )
+                if vector_results:
+                    return vector_results
+            except Exception:
+                pass
+        return self._select_by_keywords(message=message, chunks=chunks, limit=limit)
+
+    def _select_by_keywords(
         self,
         *,
         message: str,
@@ -22,9 +56,13 @@ class RAGService:
 
         scored: list[tuple[int, int, dict]] = []
         for index, chunk in enumerate(chunks):
-            chunk_terms = set(tokenize(chunk["content"]))
+            chunk_terms = set(tokenize(chunk.get("content", "")))
             overlap = len(query_terms & chunk_terms)
-            contains_query = 1 if message.strip().lower() in chunk["content"].lower() else 0
+            contains_query = (
+                1
+                if message.strip().lower() in (chunk.get("content") or "").lower()
+                else 0
+            )
             score = overlap * 10 + contains_query
             scored.append((score, -index, chunk))
 
