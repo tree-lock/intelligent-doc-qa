@@ -10,6 +10,8 @@ from app.schemas.system import (
     LLMConfigTestRequest,
     LLMConfigTestResponse,
     LLMConfigUpdateRequest,
+    MineruTokenStatusResponse,
+    MineruTokenUpdateRequest,
     ProviderListResponse,
 )
 from app.services.system_service import SystemService
@@ -73,4 +75,20 @@ def delete_llm_config(
     service: SystemService = Depends(get_system_service),
 ) -> Response:
     service.delete_llm_config(config_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/mineru-token", response_model=MineruTokenStatusResponse)
+def get_mineru_token_status(
+    service: SystemService = Depends(get_system_service),
+) -> MineruTokenStatusResponse:
+    return service.get_mineru_token_status()
+
+
+@router.put("/mineru-token", status_code=status.HTTP_204_NO_CONTENT)
+def update_mineru_token(
+    payload: MineruTokenUpdateRequest,
+    service: SystemService = Depends(get_system_service),
+) -> Response:
+    service.set_mineru_token(payload.token)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

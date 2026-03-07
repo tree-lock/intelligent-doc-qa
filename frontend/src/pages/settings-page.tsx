@@ -1,9 +1,43 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { ParametersSection } from "../components/settings/parameters-section";
 import { SettingsField } from "../components/settings/settings-field";
 import { Button } from "../components/ui/button";
+import {
+  fetchMineruTokenStatus,
+  updateMineruToken,
+} from "../lib/api/system";
 import { useSystemSettings } from "../hooks/use-system-settings";
 
+const MINERU_QUERY_KEY = ["mineru-token"] as const;
+
 export function SettingsPage() {
+  const queryClient = useQueryClient();
+  const [mineruToken, setMineruToken] = useState("");
+
+  const { data: mineruStatus } = useQuery({
+    queryKey: MINERU_QUERY_KEY,
+    queryFn: fetchMineruTokenStatus,
+  });
+
+  const mineruSaveMutation = useMutation({
+    mutationFn: (token: string | null) => updateMineruToken(token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MINERU_QUERY_KEY });
+      setMineruToken("");
+      toast.success("MinerU Token 已保存");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "保存失败");
+    },
+  });
+
+  const handleSaveMineruToken = () => {
+    const value = mineruToken.trim() || null;
+    mineruSaveMutation.mutate(value);
+  };
+
   const {
     configs,
     providers,
@@ -201,6 +235,53 @@ export function SettingsPage() {
           fieldErrors={fieldErrors}
           onFieldChange={(field, value) => setField(field, value)}
         />
+
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <h3 className="text-base font-semibold text-foreground">
+            文档解析 - MinerU
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            用于解析 PDF、Word、PPT、图片、HTML 等非文本文档。在{" "}
+            <a
+              href="https://mineru.net/apiManage"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline"
+            >
+              mineru.net
+            </a>{" "}
+            申请 Token。
+          </p>
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <div className="min-w-[280px] flex-1 space-y-1">
+              <label className="text-sm text-muted-foreground">
+                MinerU API Token
+              </label>
+              <input
+                type="password"
+                value={mineruToken}
+                onChange={(e) => setMineruToken(e.target.value)}
+                placeholder={
+                  mineruStatus?.hasToken
+                    ? "留空则保留现有 Token，输入新值可覆盖"
+                    : "请输入 MinerU API Token"
+                }
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleSaveMineruToken}
+              disabled={mineruSaveMutation.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              {mineruSaveMutation.isPending ? "保存中..." : "保存 Token"}
+            </Button>
+          </div>
+          {mineruStatus?.hasToken ? (
+            <p className="mt-2 text-xs text-emerald-600">已配置</p>
+          ) : null}
+        </section>
 
         <footer className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm">

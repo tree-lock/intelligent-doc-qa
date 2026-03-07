@@ -68,3 +68,15 @@ class LLMConfigTestRequest(BaseModel):
 class LLMConfigTestResponse(BaseModel):
     ok: bool
     detail: str | None = None
+
+
+class MineruTokenStatusResponse(BaseModel):
+    has_token: bool = Field(alias="hasToken")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class MineruTokenUpdateRequest(BaseModel):
+    token: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)

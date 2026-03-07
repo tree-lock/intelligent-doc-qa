@@ -10,6 +10,7 @@ from app.schemas.system import (
     LLMConfigTestRequest,
     LLMConfigTestResponse,
     LLMConfigUpdateRequest,
+    MineruTokenStatusResponse,
 )
 from app.services.llm_gateway import HTTPModelGateway, LLMGateway
 
@@ -145,6 +146,26 @@ class SystemService:
                 detail=f"LLM config '{config_id}' was not found.",
             )
         self.repository.delete_llm_config(config_id)
+
+    def get_mineru_token_status(self) -> MineruTokenStatusResponse:
+        """hasToken 为 True 表示前端或环境变量已配置 Token。"""
+        stored = self.repository.get_system_setting("mineru_api_token")
+        env_token = (self.settings.mineru_api_token or "").strip()
+        has_token = bool((stored and stored.strip()) or env_token)
+        return MineruTokenStatusResponse(hasToken=has_token)
+
+    def set_mineru_token(self, token: str | None) -> None:
+        if token is None or not token.strip():
+            self.repository.set_system_setting("mineru_api_token", "")
+        else:
+            self.repository.set_system_setting("mineru_api_token", token.strip())
+
+    def get_mineru_token(self) -> str | None:
+        """供 DocumentService 使用，优先返回前端配置的 token，否则返回 env。"""
+        stored = self.repository.get_system_setting("mineru_api_token")
+        if stored and stored.strip():
+            return stored.strip()
+        return (self.settings.mineru_api_token or "").strip() or None
 
     def test_llm_config(self, payload: LLMConfigTestRequest) -> LLMConfigTestResponse:
         normalized = self._normalize_test_payload(payload)

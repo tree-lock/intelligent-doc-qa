@@ -81,8 +81,8 @@
 
 支持类型：
 
-- 扩展名：`.txt`、`.md`、`.markdown`
-- MIME：`text/plain`、`text/markdown`
+- **直接解析**（无需额外配置）：`.txt`、`.md`、`.markdown`；MIME `text/plain`、`text/markdown`
+- **MinerU 解析**（需配置 `MINERU_API_TOKEN`）：`.pdf`、`.doc`、`.docx`、`.ppt`、`.pptx`、`.png`、`.jpg`、`.jpeg`、`.html`
 
 处理规则：
 

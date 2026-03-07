@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from app.core.config import get_settings
 from app.core.database import Database
 from app.repositories.document_repo import DocumentRepository
+from app.repositories.system_repo import SystemRepository
 from app.schemas.documents import (
     DeleteDocumentsRequest,
     DocumentCreateRequest,
@@ -18,12 +19,18 @@ def get_document_service() -> DocumentService:
     settings = get_settings()
     database = Database(settings.database_url)
     repository = DocumentRepository(database)
+    system_repository = SystemRepository(database)
     vector_store = get_vector_store_service(
         enabled=settings.use_vector_search,
         persist_directory=settings.chroma_persist_path,
         embedding_model=settings.embedding_model,
     )
-    return DocumentService(repository, settings, vector_store=vector_store)
+    return DocumentService(
+        repository,
+        settings,
+        vector_store=vector_store,
+        system_repository=system_repository,
+    )
 
 
 @router.get("", response_model=list[DocumentItem])

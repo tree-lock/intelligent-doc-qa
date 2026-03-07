@@ -1,9 +1,13 @@
+import asyncio
 import os
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.core.config import get_settings
 from app.core.database import Database
@@ -160,6 +164,18 @@ class BackendServiceTests(unittest.TestCase):
         self.assertEqual(settings.database_url, f"sqlite+aiosqlite:///{self.database_path}")
         self.assertEqual(settings.chunk_size, 24)
         self.assertEqual(settings.chunk_overlap, 4)
+
+    def test_upload_mineru_file_without_token_returns_503(self) -> None:
+        """上传 PDF 等 MinerU 格式但未配置 MINERU_API_TOKEN 时返回 503。"""
+        uf = StarletteUploadFile(filename="sample.pdf", file=BytesIO(b"%PDF-1.4 minimal"))
+
+        async def run() -> None:
+            with self.assertRaises(HTTPException) as ctx:
+                await self.document_service.ingest_uploaded_file(uf)
+            self.assertEqual(ctx.exception.status_code, 503)
+            self.assertIn("MINERU_API_TOKEN", str(ctx.exception.detail))
+
+        asyncio.run(run())
 
     def test_upload_normalizes_text_and_skips_duplicate_names(self) -> None:
         first = self.document_service.ingest_uploaded_bytes(

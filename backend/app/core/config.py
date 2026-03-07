@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     chroma_persist_path: str = "./data/chroma"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
+    # MinerU 文档解析（PDF、Word、PPT、图片、HTML -> Markdown）
+    # 在 https://mineru.net/apiManage 申请 Token
+    mineru_api_token: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

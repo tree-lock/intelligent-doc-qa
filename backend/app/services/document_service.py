@@ -5,7 +5,13 @@ from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import Settings
 from app.repositories.document_repo import DocumentRepository
+from app.repositories.system_repo import SystemRepository
 from app.schemas.documents import DocumentCreateRequest, DocumentItem
+from app.services.mineru_client import (
+    is_mineru_supported,
+    parse_with_mineru,
+    validate_mineru_file,
+)
 
 if TYPE_CHECKING:
     from app.services.vector_store_service import VectorStoreService
@@ -21,10 +27,12 @@ class DocumentService:
         repository: DocumentRepository,
         settings: Settings,
         vector_store: "VectorStoreService | None" = None,
+        system_repository: SystemRepository | None = None,
     ) -> None:
         self.repository = repository
         self.settings = settings
         self.vector_store = vector_store
+        self.system_repository = system_repository
 
     def list_documents(self) -> list[DocumentItem]:
         return [self._to_document_item(row) for row in self.repository.list_documents()]
@@ -73,12 +81,80 @@ class DocumentService:
         return uploaded
 
     async def ingest_uploaded_file(self, file: UploadFile) -> DocumentItem | None:
+        filename = file.filename or "untitled.txt"
         raw_bytes = await file.read()
+
+        if is_mineru_supported(filename):
+            return await self._ingest_mineru_file(filename=filename, raw_bytes=raw_bytes)
+
         return self.ingest_uploaded_bytes(
-            filename=file.filename or "untitled.txt",
+            filename=filename,
             content_type=file.content_type,
             raw_bytes=raw_bytes,
         )
+
+    def _get_mineru_token(self) -> str | None:
+        """优先使用前端配置的 Token，否则使用环境变量。"""
+        if self.system_repository:
+            stored = self.system_repository.get_system_setting("mineru_api_token")
+            if stored and stored.strip():
+                return stored.strip()
+        return (self.settings.mineru_api_token or "").strip() or None
+
+    async def _ingest_mineru_file(
+        self, *, filename: str, raw_bytes: bytes
+    ) -> DocumentItem | None:
+        """使用 MinerU 解析 PDF/Word/PPT/图片/HTML，转为 Markdown 后入库。"""
+        token = self._get_mineru_token()
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="MinerU 解析服务未配置。请在系统配置页填写 MinerU API Token，或在 .env 中设置 MINERU_API_TOKEN。"
+                "在 https://mineru.net/apiManage 申请 Token。",
+            )
+        try:
+            validate_mineru_file(filename, len(raw_bytes))
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            ) from e
+
+        if self.repository.get_by_name(filename):
+            return None
+
+        try:
+            plain_text = await parse_with_mineru(token, filename, raw_bytes)
+        except (RuntimeError, TimeoutError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"MinerU 解析失败: {e}",
+            ) from e
+
+        normalized = self.normalize_plain_text(plain_text)
+        if not normalized:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="MinerU 解析结果为空，请检查文件内容。",
+            )
+
+        created = self.repository.create_document(
+            name=filename,
+            title=filename,
+            plain_text=normalized,
+            document_type="markdown",
+            status="ready",
+            updated_at=utc_now_iso(),
+        )
+        chunks = self.chunk_plain_text(normalized)
+        self.repository.replace_chunks(created["id"], chunks)
+        self._sync_vector_chunks(
+            document_id=created["id"],
+            name=filename,
+            title=filename,
+            chunks=chunks,
+        )
+        return self._to_document_item(created)
 
     def ingest_uploaded_bytes(
         self,
@@ -132,7 +208,7 @@ class DocumentService:
             return "txt"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only TXT and Markdown uploads are supported.",
+            detail="不支持的文件格式。支持：TXT、Markdown；配置 MINERU_API_TOKEN 后还可支持 PDF、Word、PPT、图片、HTML。",
         )
 
     def chunk_plain_text(self, plain_text: str) -> list[str]:

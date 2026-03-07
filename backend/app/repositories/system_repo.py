@@ -190,3 +190,21 @@ class SystemRepository:
     def delete_llm_config(self, config_id: str) -> None:
         with self.database.connect() as connection:
             connection.execute("DELETE FROM llm_configs WHERE id = ?", (config_id,))
+
+    def get_system_setting(self, key: str) -> str | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM system_settings WHERE key = ?",
+                (key,),
+            ).fetchone()
+        return row["value"] if row and row["value"] else None
+
+    def set_system_setting(self, key: str, value: str) -> None:
+        with self.database.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO system_settings (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
