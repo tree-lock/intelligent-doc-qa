@@ -1,5 +1,5 @@
 import { SettingsPage } from "./settings-page";
 
-export function SettingsRoutePage() {
+export default function SettingsRoutePage() {
   return <SettingsPage />;
 }

@@ -1,7 +1,7 @@
 import { useAppRouteContext } from "../app/route-context";
 import { ChatPage } from "./chat-page";
 
-export function ChatRoutePage() {
+function ChatRoutePage() {
   const {
     currentChatId,
     currentSession,
@@ -37,3 +37,6 @@ export function ChatRoutePage() {
     />
   );
 }
+
+export { ChatRoutePage };
+export default ChatRoutePage;

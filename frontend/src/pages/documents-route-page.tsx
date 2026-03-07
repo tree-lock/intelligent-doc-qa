@@ -13,7 +13,7 @@ function DocumentsRoutePageContent() {
   );
 }
 
-export function DocumentsRoutePage() {
+function DocumentsRoutePage() {
   return (
     <div className="flex min-h-[calc(100vh-8rem)] min-w-0 flex-1 flex-col justify-center">
       <Suspense
@@ -26,3 +26,6 @@ export function DocumentsRoutePage() {
     </div>
   );
 }
+
+export { DocumentsRoutePage };
+export default DocumentsRoutePage;

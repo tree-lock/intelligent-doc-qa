@@ -1,3 +1,4 @@
+import "katex/dist/katex.min.css";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
