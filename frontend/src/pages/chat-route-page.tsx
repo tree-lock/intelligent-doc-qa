@@ -6,9 +6,11 @@ export function ChatRoutePage() {
     currentChatId,
     currentSession,
     draftPendingDocuments,
+    draftModelConfigId,
     onSendMessage,
     isSendingMessage,
     onPendingDocumentsChange,
+    onModelConfigChange,
   } = useAppRouteContext();
 
   return (
@@ -19,9 +21,13 @@ export function ChatRoutePage() {
       pendingDocuments={
         currentSession?.pendingDocuments ?? draftPendingDocuments
       }
+      currentModelConfigId={
+        currentSession?.currentModelConfigId ?? draftModelConfigId
+      }
       onSendMessage={onSendMessage}
       isSendingMessage={isSendingMessage}
       onPendingDocumentsChange={onPendingDocumentsChange}
+      onModelConfigChange={onModelConfigChange}
     />
   );
 }

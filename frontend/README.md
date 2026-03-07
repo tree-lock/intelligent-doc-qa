@@ -179,17 +179,16 @@ src/
 ### 7.4 系统配置页 `/settings`
 
 - **`src/pages/settings-page.tsx`**
-  - 模型来源：系统内置 MiniMax / 自定义模型
   - 自定义模型：Provider、Model Name、API Key
   - 模型参数：maxTokens、temperature、topP
   - 保存与重置，`localStorage` 持久化
 
 ### 7.5 数据层说明
 
-| 模块       | 当前实现              | 后端对接说明                       |
-|------------|-----------------------|------------------------------------|
-| 文档管理   | `documents-storage.ts`（localStorage） | 替换 `lib/api/documents.ts` 为 HTTP 请求 |
-| 会话与消息 | `chat-sessions.ts` + `lib/api/chat.ts`（Mock） | 替换 `sendChatMessage` 调用 `POST /api/v1/chat/completions` |
-| 系统配置   | `system-settings-storage.ts`（localStorage，键名：`doc-qa.system-settings.v1`） | 可选替换为 `System API` 持久化           |
+| 模块       | 当前实现                                                                        | 后端对接说明                                                |
+| ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 文档管理   | `documents-storage.ts`（localStorage）                                          | 替换 `lib/api/documents.ts` 为 HTTP 请求                    |
+| 会话与消息 | `chat-sessions.ts` + `lib/api/chat.ts`（Mock）                                  | 替换 `sendChatMessage` 调用 `POST /api/v1/chat/completions` |
+| 系统配置   | `system-settings-storage.ts`（localStorage，键名：`doc-qa.system-settings.v1`） | 可选替换为 `System API` 持久化                              |
 
 通过环境变量 `VITE_API_BASE_URL` 配置后端地址，便于联调切换。

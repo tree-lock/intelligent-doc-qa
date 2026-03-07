@@ -106,13 +106,15 @@ flowchart LR
 
 ### 5.3 系统配置模块
 
-- **输入**：Provider 配置、模型参数
-- **处理**：配置校验与持久化，运行时注入问答链路
-- **输出**：当前生效配置
+- **输入**：多个模型配置、默认模型、Provider 参数
+- **处理**：配置校验与持久化，聊天请求按 `modelConfigId` 选模并可在同一会话内切换
+- **输出**：模型配置列表、Provider 列表、当前会话模型快照
 - **接口**：
   - `GET /api/v1/system/providers`
-  - `GET /api/v1/system/config`
-  - `PUT /api/v1/system/config`
+  - `GET /api/v1/system/llm-configs`
+  - `POST /api/v1/system/llm-configs`
+  - `PUT /api/v1/system/llm-configs/{id}`
+  - `DELETE /api/v1/system/llm-configs/{id}`
 
 ## 6. 前端架构（React）
 
@@ -197,9 +199,6 @@ OpenAPI 文档建议：
 后端：
 
 - `APP_ENV=dev`
-- `OPENAI_API_KEY=...`
-- `ANTHROPIC_API_KEY=...`
-- `DEFAULT_PROVIDER=openai`
 - `VECTOR_STORE=faiss`
 
 前端：

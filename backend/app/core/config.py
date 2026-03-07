@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -5,12 +7,17 @@ class Settings(BaseSettings):
     app_name: str = "Doc QA Backend"
     app_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
-
-    default_provider: str = "openai"
-    vector_store: str = "faiss"
-
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
+    database_url: str = "sqlite+aiosqlite:///./doc_qa.db"
+    cors_allowed_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    chunk_size: int = 800
+    chunk_overlap: int = 120
+    system_providers: list[str] = ["openai", "claude", "local", "community"]
+    remote_api_key_providers: list[str] = ["openai", "claude"]
+    api_base_required_providers: list[str] = ["local", "community"]
+    local_provider_name: str = "local"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -19,4 +26,6 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

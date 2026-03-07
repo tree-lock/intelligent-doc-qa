@@ -1,24 +1,31 @@
-from datetime import datetime
-from uuid import UUID, uuid4
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class DocumentCreateResponse(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    filename: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+DocumentType = Literal["txt", "markdown"]
+DocumentStatus = Literal["ready", "indexing", "failed"]
 
 
 class DocumentItem(BaseModel):
-    id: UUID
-    filename: str
-    created_at: datetime
+    id: str
+    name: str
+    title: str
+    plain_text: str = Field(alias="plainText")
+    type: DocumentType
+    status: DocumentStatus
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
-class DocumentListResponse(BaseModel):
-    items: list[DocumentItem]
+class DocumentCreateRequest(BaseModel):
+    title: str | None = None
+    plain_text: str = Field(alias="plainText", min_length=1)
+    type: DocumentType = "txt"
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
-class DocumentDetailResponse(DocumentItem):
-    content_preview: str = ""
+class DeleteDocumentsRequest(BaseModel):
+    ids: list[str]

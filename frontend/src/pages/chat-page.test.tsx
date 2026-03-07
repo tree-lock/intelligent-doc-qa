@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { documentsQueryKey } from "../hooks/use-documents-query";
+import { llmConfigsQueryKey } from "../hooks/use-llm-configs-query";
 import { NEW_CHAT_ID } from "../lib/chat-sessions";
 import { testDocuments } from "../test/fixtures";
 import { ChatPage } from "./chat-page";
@@ -20,6 +21,22 @@ function renderWithQueryClient(ui: ReactElement) {
     },
   });
   queryClient.setQueryData(documentsQueryKey, testDocuments);
+  queryClient.setQueryData(llmConfigsQueryKey, [
+    {
+      id: "cfg-1",
+      name: "默认模型",
+      provider: "openai",
+      apiBase: "",
+      modelName: "gpt-4o-mini",
+      temperature: 0.7,
+      topP: 0.9,
+      maxTokens: 2000,
+      isDefault: true,
+      hasApiKey: true,
+      createdAt: "2026-03-07T10:00:00.000Z",
+      updatedAt: "2026-03-07T10:00:00.000Z",
+    },
+  ]);
   return render(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
@@ -35,9 +52,11 @@ describe("ChatPage document states", () => {
         messages={[]}
         loadedDocuments={[]}
         pendingDocuments={[testDocuments[0]]}
+        currentModelConfigId="cfg-1"
         onSendMessage={vi.fn(async () => {})}
         isSendingMessage={false}
         onPendingDocumentsChange={onPendingDocumentsChange}
+        onModelConfigChange={vi.fn()}
       />,
     );
 
@@ -60,9 +79,11 @@ describe("ChatPage document states", () => {
         messages={[]}
         loadedDocuments={[testDocuments[0]]}
         pendingDocuments={[testDocuments[1]]}
+        currentModelConfigId="cfg-1"
         onSendMessage={vi.fn(async () => {})}
         isSendingMessage={false}
         onPendingDocumentsChange={onPendingDocumentsChange}
+        onModelConfigChange={vi.fn()}
       />,
     );
 
@@ -105,11 +126,13 @@ describe("ChatPage input submit behavior", () => {
         messages={[]}
         loadedDocuments={[]}
         pendingDocuments={[]}
+        currentModelConfigId="cfg-1"
         onSendMessage={async (content) => {
           onSendMessage(content);
         }}
         isSendingMessage={false}
         onPendingDocumentsChange={vi.fn()}
+        onModelConfigChange={vi.fn()}
       />,
     );
 
@@ -138,11 +161,13 @@ describe("ChatPage input submit behavior", () => {
         messages={[]}
         loadedDocuments={[]}
         pendingDocuments={[]}
+        currentModelConfigId="cfg-1"
         onSendMessage={async (content) => {
           onSendMessage(content);
         }}
         isSendingMessage={false}
         onPendingDocumentsChange={vi.fn()}
+        onModelConfigChange={vi.fn()}
       />,
     );
 

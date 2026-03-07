@@ -12,6 +12,8 @@ const sampleSessions: ChatSession[] = [
     messages: [],
     loadedDocuments: [],
     pendingDocuments: [],
+    currentProvider: "",
+    currentModelName: "",
     createdAt: "2026-03-06T10:00:00.000Z",
     updatedAt: "2026-03-06T10:00:00.000Z",
   },

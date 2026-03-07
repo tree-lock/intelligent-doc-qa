@@ -1,29 +1,65 @@
-from datetime import datetime
-from uuid import UUID, uuid4
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.documents import DocumentItem
+
+
+ChatRole = Literal["user", "assistant"]
 
 
 class ChatCompletionRequest(BaseModel):
-    question: str
-    session_id: UUID | None = None
+    message: str = Field(min_length=1)
+    documents: list[DocumentItem]
+    session_id: str | None = Field(default=None, alias="sessionId")
+    model_config_id: str | None = Field(default=None, alias="modelConfigId")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ChatCompletionResponse(BaseModel):
-    session_id: UUID
-    answer: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    content: str
+    session_id: str | None = Field(default=None, alias="sessionId")
+    created_at: str | None = Field(default=None, alias="createdAt")
+    references: list[str] = Field(default_factory=list)
+    model_config_id: str | None = Field(default=None, alias="modelConfigId")
+    provider: str | None = None
+    model_name: str | None = Field(default=None, alias="modelName")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ChatMessageItem(BaseModel):
+    id: str
+    role: ChatRole
+    content: str
 
 
 class ChatSessionItem(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: str
     title: str
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    messages: list[ChatMessageItem] = Field(default_factory=list)
+    loaded_documents: list[DocumentItem] = Field(
+        default_factory=list,
+        alias="loadedDocuments",
+    )
+    pending_documents: list[DocumentItem] = Field(
+        default_factory=list,
+        alias="pendingDocuments",
+    )
+    current_model_config_id: str | None = Field(
+        default=None,
+        alias="currentModelConfigId",
+    )
+    current_provider: str = Field(default="", alias="currentProvider")
+    current_model_name: str = Field(default="", alias="currentModelName")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
-class ChatSessionListResponse(BaseModel):
-    items: list[ChatSessionItem]
-
-
-class ChatSessionDetailResponse(ChatSessionItem):
-    messages: list[dict[str, str]] = Field(default_factory=list)
+class HealthResponse(BaseModel):
+    ok: bool
+    app: str
+    version: str

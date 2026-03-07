@@ -13,6 +13,7 @@ import {
   sortSessionsByUpdatedAtDesc,
 } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
+import { useLLMConfigsQuery } from "./use-llm-configs-query";
 import { useSendChatMessageMutation } from "./use-send-chat-message-mutation";
 
 export function useAppChatState(
@@ -23,9 +24,13 @@ export function useAppChatState(
   const navigate = useNavigate();
   const { mutateAsync: sendChatMessage, isPending: isSendingMessage } =
     useSendChatMessageMutation();
+  const { data: llmConfigs = [] } = useLLMConfigsQuery();
   const [draftPendingDocuments, setDraftPendingDocuments] = useState<
     DocumentItem[]
   >([]);
+  const [draftModelConfigId, setDraftModelConfigId] = useState<
+    string | undefined
+  >();
 
   const currentChatId = useMemo(
     () => resolveCurrentChatId(location.pathname, sessions),
@@ -42,6 +47,15 @@ export function useAppChatState(
     () => sessions.find((session) => session.id === currentChatId),
     [currentChatId, sessions],
   );
+
+  useEffect(() => {
+    if (draftModelConfigId || llmConfigs.length === 0) {
+      return;
+    }
+    const defaultConfig =
+      llmConfigs.find((item) => item.isDefault) ?? llmConfigs[0];
+    setDraftModelConfigId(defaultConfig?.id);
+  }, [draftModelConfigId, llmConfigs]);
 
   const onStartChat = useCallback(
     (selectedDocs: DocumentItem[]) => {
@@ -61,6 +75,12 @@ export function useAppChatState(
   const onSendMessage = useCallback(
     async (content: string) => {
       const now = new Date().toISOString();
+      const selectedModel =
+        currentChatId === NEW_CHAT_ID
+          ? llmConfigs.find((item) => item.id === draftModelConfigId)
+          : llmConfigs.find(
+              (item) => item.id === currentSession?.currentModelConfigId,
+            );
       const userMessage: ChatMessage = {
         id: `m-${Date.now()}`,
         role: "user",
@@ -90,6 +110,11 @@ export function useAppChatState(
       const assistantReply = await sendChatMessage({
         message: content,
         documents: currentDocuments,
+        sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
+        modelConfigId:
+          currentChatId === NEW_CHAT_ID
+            ? draftModelConfigId
+            : currentSession?.currentModelConfigId,
       });
 
       const assistantMessage: ChatMessage = {
@@ -99,13 +124,19 @@ export function useAppChatState(
       };
 
       if (currentChatId === NEW_CHAT_ID) {
-        const newChatId = createChatId();
+        const newChatId = assistantReply.sessionId ?? createChatId();
         const newSession: ChatSession = {
           id: newChatId,
           title: createSessionTitle(content),
           messages: [userMessage, assistantMessage],
           loadedDocuments: draftPendingDocuments,
           pendingDocuments: [],
+          currentModelConfigId:
+            assistantReply.modelConfigId ?? selectedModel?.id,
+          currentProvider:
+            assistantReply.provider ?? selectedModel?.provider ?? "",
+          currentModelName:
+            assistantReply.modelName ?? selectedModel?.modelName ?? "",
           createdAt: now,
           updatedAt: now,
         };
@@ -117,10 +148,11 @@ export function useAppChatState(
         return;
       }
 
+      const targetSessionId = assistantReply.sessionId ?? currentChatId;
       setSessions((prev) =>
         sortSessionsByUpdatedAtDesc(
           prev.map((session) => {
-            if (session.id !== currentChatId) {
+            if (session.id !== targetSessionId) {
               return session;
             }
             return {
@@ -137,6 +169,12 @@ export function useAppChatState(
               ],
               pendingDocuments: [],
               messages: [...session.messages, userMessage, assistantMessage],
+              currentModelConfigId:
+                assistantReply.modelConfigId ?? session.currentModelConfigId,
+              currentProvider:
+                assistantReply.provider ?? session.currentProvider,
+              currentModelName:
+                assistantReply.modelName ?? session.currentModelName,
               updatedAt: now,
             };
           }),
@@ -146,7 +184,9 @@ export function useAppChatState(
     [
       currentChatId,
       currentSession,
+      draftModelConfigId,
       draftPendingDocuments,
+      llmConfigs,
       navigate,
       sendChatMessage,
       setSessions,
@@ -179,14 +219,48 @@ export function useAppChatState(
     [currentChatId, setSessions],
   );
 
+  const onModelConfigChange = useCallback(
+    (nextModelConfigId: string) => {
+      if (currentChatId === NEW_CHAT_ID) {
+        setDraftModelConfigId(nextModelConfigId);
+        return;
+      }
+      const selectedConfig = llmConfigs.find(
+        (item) => item.id === nextModelConfigId,
+      );
+      const now = new Date().toISOString();
+      setSessions((previous) =>
+        sortSessionsByUpdatedAtDesc(
+          previous.map((session) => {
+            if (session.id !== currentChatId) {
+              return session;
+            }
+            return {
+              ...session,
+              currentModelConfigId: nextModelConfigId,
+              currentProvider:
+                selectedConfig?.provider ?? session.currentProvider,
+              currentModelName:
+                selectedConfig?.modelName ?? session.currentModelName,
+              updatedAt: now,
+            };
+          }),
+        ),
+      );
+    },
+    [currentChatId, llmConfigs, setSessions],
+  );
+
   return {
     currentChatId,
     currentSession,
     draftPendingDocuments,
+    draftModelConfigId,
     onStartChat,
     onOpenRecentChat,
     onSendMessage,
     isSendingMessage,
     onPendingDocumentsChange,
+    onModelConfigChange,
   };
 }

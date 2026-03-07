@@ -8,6 +8,9 @@ export type ChatSession = {
   messages: ChatMessage[];
   loadedDocuments: DocumentItem[];
   pendingDocuments: DocumentItem[];
+  currentModelConfigId?: string;
+  currentProvider: string;
+  currentModelName: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -73,6 +76,16 @@ export function loadSessions() {
         pendingDocuments: Array.isArray(item.pendingDocuments)
           ? item.pendingDocuments
           : [],
+        currentModelConfigId:
+          typeof item.currentModelConfigId === "string"
+            ? item.currentModelConfigId
+            : undefined,
+        currentProvider:
+          typeof item.currentProvider === "string" ? item.currentProvider : "",
+        currentModelName:
+          typeof item.currentModelName === "string"
+            ? item.currentModelName
+            : "",
       })) as ChatSession[];
   } catch {
     return [] as ChatSession[];

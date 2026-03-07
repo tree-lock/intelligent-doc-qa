@@ -32,6 +32,8 @@ describe("chat-sessions", () => {
     const sessions = loadSessions();
     expect(sessions).toHaveLength(1);
     expect(sessions[0]?.pendingDocuments).toEqual([]);
+    expect(sessions[0]?.currentProvider).toBe("");
+    expect(sessions[0]?.currentModelName).toBe("");
   });
 
   it("persists and loads pendingDocuments", () => {
@@ -42,6 +44,9 @@ describe("chat-sessions", () => {
       messages: [],
       loadedDocuments: [testDocuments[0]],
       pendingDocuments: [testDocuments[1]],
+      currentModelConfigId: "cfg-1",
+      currentProvider: "openai",
+      currentModelName: "gpt-4o-mini",
       createdAt: now,
       updatedAt: now,
     };
@@ -50,6 +55,7 @@ describe("chat-sessions", () => {
     const sessions = loadSessions();
     expect(sessions[0]?.loadedDocuments).toEqual([testDocuments[0]]);
     expect(sessions[0]?.pendingDocuments).toEqual([testDocuments[1]]);
+    expect(sessions[0]?.currentModelConfigId).toBe("cfg-1");
   });
 
   it("sorts sessions by updatedAt descending", () => {
@@ -60,6 +66,8 @@ describe("chat-sessions", () => {
         messages: [],
         loadedDocuments: [],
         pendingDocuments: [],
+        currentProvider: "",
+        currentModelName: "",
         createdAt: "2026-03-06T10:00:00.000Z",
         updatedAt: "2026-03-06T10:00:00.000Z",
       },
@@ -69,6 +77,8 @@ describe("chat-sessions", () => {
         messages: [],
         loadedDocuments: [],
         pendingDocuments: [],
+        currentProvider: "",
+        currentModelName: "",
         createdAt: "2026-03-06T10:30:00.000Z",
         updatedAt: "2026-03-06T10:30:00.000Z",
       },

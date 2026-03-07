@@ -1,54 +1,95 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { DOCUMENTS_STORAGE_KEY } from "../documents-storage";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteDocuments, fetchDocuments, uploadDocuments } from "./documents";
 
 describe("documents api", () => {
-  afterEach(() => {
-    window.localStorage.clear();
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("uploads txt/md and parses plainText with normalization", async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("fetches documents from backend", async () => {
+    const responsePayload = [
+      {
+        id: "doc-1",
+        name: "note.md",
+        title: "note.md",
+        plainText: "# Title\n\nBody",
+        type: "markdown",
+        status: "ready",
+        updatedAt: "2026-03-07T10:00:00.000Z",
+      },
+    ];
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(responsePayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const documents = await fetchDocuments();
+    expect(documents).toEqual(responsePayload);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/documents",
+      undefined,
+    );
+  });
+
+  it("uploads files with multipart/form-data", async () => {
     const mdFile = new File(["\uFEFF# Title\r\n\r\nBody"], "note.md", {
       type: "text/markdown",
     });
     const txtFile = new File(["line1\r\nline2"], "readme.txt", {
       type: "text/plain",
     });
-    const imageFile = new File(["binary"], "image.png", { type: "image/png" });
+    const responsePayload = [
+      {
+        id: "doc-1",
+        name: "note.md",
+        title: "note.md",
+        plainText: "# Title\n\nBody",
+        type: "markdown",
+        status: "ready",
+        updatedAt: "2026-03-07T10:00:00.000Z",
+      },
+      {
+        id: "doc-2",
+        name: "readme.txt",
+        title: "readme.txt",
+        plainText: "line1\nline2",
+        type: "txt",
+        status: "ready",
+        updatedAt: "2026-03-07T10:01:00.000Z",
+      },
+    ];
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(responsePayload), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
 
-    const uploaded = await uploadDocuments([mdFile, txtFile, imageFile]);
+    const uploaded = await uploadDocuments([mdFile, txtFile]);
     expect(uploaded).toHaveLength(2);
-    expect(uploaded[0]?.title).toBe(uploaded[0]?.name);
-    expect(uploaded[0]?.plainText).toBe("# Title\n\nBody");
-    expect(uploaded[1]?.plainText).toBe("line1\nline2");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0] ?? [];
+    expect(requestInit?.method).toBe("POST");
+    expect(requestInit?.body).toBeInstanceOf(FormData);
   });
 
-  it("deduplicates by file name and fetches from localStorage", async () => {
-    await uploadDocuments([
-      new File(["first"], "dup.txt", { type: "text/plain" }),
-    ]);
-    await uploadDocuments([
-      new File(["second"], "dup.txt", { type: "text/plain" }),
-    ]);
+  it("deletes documents by ids via backend", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
-    const documents = await fetchDocuments();
-    expect(documents).toHaveLength(1);
-    expect(documents[0]?.plainText).toBe("first");
-
-    const raw = window.localStorage.getItem(DOCUMENTS_STORAGE_KEY);
-    expect(raw).toContain("dup.txt");
-  });
-
-  it("deletes documents by ids", async () => {
-    await uploadDocuments([
-      new File(["a"], "a.txt", { type: "text/plain" }),
-      new File(["b"], "b.txt", { type: "text/plain" }),
-    ]);
-    const before = await fetchDocuments();
-    expect(before).toHaveLength(2);
-
-    await deleteDocuments([before[0]?.id]);
-    const after = await fetchDocuments();
-    expect(after).toHaveLength(1);
+    await deleteDocuments(["doc-1", "doc-2"]);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/documents",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: ["doc-1", "doc-2"] }),
+      }),
+    );
   });
 });

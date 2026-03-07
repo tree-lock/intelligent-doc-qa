@@ -1,28 +1,66 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Response, status
 
-from app.deps import config_service
+from app.core.config import get_settings
+from app.core.database import Database
+from app.repositories.system_repo import SystemRepository
 from app.schemas.system import (
+    LLMConfigCreateRequest,
+    LLMConfigItem,
+    LLMConfigListResponse,
+    LLMConfigUpdateRequest,
     ProviderListResponse,
-    SystemConfigResponse,
-    SystemConfigUpdateRequest,
 )
+from app.services.system_service import SystemService
 
-router = APIRouter()
+router = APIRouter(prefix="/system", tags=["system"])
+
+
+def get_system_service() -> SystemService:
+    settings = get_settings()
+    database = Database(settings.database_url)
+    repository = SystemRepository(database)
+    return SystemService(repository, settings)
 
 
 @router.get("/providers", response_model=ProviderListResponse)
-def list_providers() -> ProviderListResponse:
-    return ProviderListResponse(items=config_service.list_providers())
+def list_providers(
+    service: SystemService = Depends(get_system_service),
+) -> ProviderListResponse:
+    return ProviderListResponse(items=service.list_providers())
 
 
-@router.get("/config", response_model=SystemConfigResponse)
-def get_system_config() -> SystemConfigResponse:
-    return config_service.get_config()
+@router.get("/llm-configs", response_model=LLMConfigListResponse)
+def list_llm_configs(
+    service: SystemService = Depends(get_system_service),
+) -> LLMConfigListResponse:
+    return LLMConfigListResponse(items=service.list_llm_configs())
 
 
-@router.put("/config", response_model=SystemConfigResponse)
-def update_system_config(payload: SystemConfigUpdateRequest) -> SystemConfigResponse:
-    return config_service.update_config(
-        default_provider=payload.default_provider,
-        vector_store=payload.vector_store,
-    )
+@router.post(
+    "/llm-configs",
+    response_model=LLMConfigItem,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_llm_config(
+    payload: LLMConfigCreateRequest,
+    service: SystemService = Depends(get_system_service),
+) -> LLMConfigItem:
+    return service.create_llm_config(payload)
+
+
+@router.put("/llm-configs/{config_id}", response_model=LLMConfigItem)
+def update_llm_config(
+    config_id: str,
+    payload: LLMConfigUpdateRequest,
+    service: SystemService = Depends(get_system_service),
+) -> LLMConfigItem:
+    return service.update_llm_config(config_id, payload)
+
+
+@router.delete("/llm-configs/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_llm_config(
+    config_id: str,
+    service: SystemService = Depends(get_system_service),
+) -> Response:
+    service.delete_llm_config(config_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

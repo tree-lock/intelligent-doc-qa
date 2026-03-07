@@ -1,18 +1,26 @@
 import {
   type ChatSession,
-  loadSessions,
-  saveSessions,
   sortSessionsByUpdatedAtDesc,
 } from "../chat-sessions";
+import { apiFetch } from "./client";
 
 export async function fetchChatSessions(): Promise<ChatSession[]> {
-  return sortSessionsByUpdatedAtDesc(loadSessions());
+  const sessions = await apiFetch<ChatSession[]>("/api/v1/chat/sessions");
+  return sortSessionsByUpdatedAtDesc(sessions);
 }
 
 export async function persistChatSessions(
   sessions: ChatSession[],
 ): Promise<ChatSession[]> {
-  const sortedSessions = sortSessionsByUpdatedAtDesc(sessions);
-  saveSessions(sortedSessions);
-  return sortedSessions;
+  const persistedSessions = await apiFetch<ChatSession[]>(
+    "/api/v1/chat/sessions",
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(sessions),
+    },
+  );
+  return sortSessionsByUpdatedAtDesc(persistedSessions);
 }

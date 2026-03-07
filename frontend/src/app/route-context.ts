@@ -7,9 +7,11 @@ export type AppRouteContextValue = {
   currentChatId: string;
   currentSession?: ChatSession;
   draftPendingDocuments: DocumentItem[];
+  draftModelConfigId?: string;
   onSendMessage: (content: string) => Promise<void>;
   isSendingMessage: boolean;
   onPendingDocumentsChange: (nextDocuments: DocumentItem[]) => void;
+  onModelConfigChange: (nextModelConfigId: string) => void;
 };
 
 export function useAppRouteContext() {

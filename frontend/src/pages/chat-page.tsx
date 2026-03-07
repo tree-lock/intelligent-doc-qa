@@ -6,6 +6,7 @@ import { LoadingPanel } from "../components/ui/loading-panel";
 import { useChatInput } from "../hooks/use-chat-input";
 import { useDocumentSelection } from "../hooks/use-document-selection";
 import { useDocumentsQuery } from "../hooks/use-documents-query";
+import { useLLMConfigsQuery } from "../hooks/use-llm-configs-query";
 import { NEW_CHAT_ID } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
 
@@ -14,9 +15,11 @@ type ChatPageProps = {
   messages: ChatMessage[];
   loadedDocuments: DocumentItem[];
   pendingDocuments: DocumentItem[];
+  currentModelConfigId?: string;
   onSendMessage: (content: string) => Promise<void>;
   isSendingMessage: boolean;
   onPendingDocumentsChange: (documents: DocumentItem[]) => void;
+  onModelConfigChange: (modelConfigId: string) => void;
 };
 
 export function ChatPage({
@@ -24,11 +27,14 @@ export function ChatPage({
   messages,
   loadedDocuments,
   pendingDocuments,
+  currentModelConfigId,
   onSendMessage,
   isSendingMessage,
   onPendingDocumentsChange,
+  onModelConfigChange,
 }: ChatPageProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { data: llmConfigs = [] } = useLLMConfigsQuery();
 
   const {
     selectedDocumentIds,
@@ -71,11 +77,34 @@ export function ChatPage({
 
       <section className="col-span-9 flex flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <header className="border-b border-slate-200 px-4 py-3">
-          <h1 className="text-sm font-medium text-slate-900">Agent 问答</h1>
-          <p className="mt-1 text-xs text-slate-500">
-            会话 ID：
-            {chatId === NEW_CHAT_ID ? "new（发送首条消息后生成）" : chatId}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-sm font-medium text-slate-900">Agent 问答</h1>
+              <p className="mt-1 text-xs text-slate-500">
+                会话 ID：
+                {chatId === NEW_CHAT_ID ? "new（发送首条消息后生成）" : chatId}
+              </p>
+            </div>
+            <label className="flex min-w-56 flex-col gap-1 text-xs text-slate-500">
+              <span>当前对话模型</span>
+              <select
+                value={currentModelConfigId ?? ""}
+                onChange={(event) => onModelConfigChange(event.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                disabled={llmConfigs.length === 0}
+              >
+                {llmConfigs.length === 0 ? (
+                  <option value="">请先到系统配置中创建模型</option>
+                ) : null}
+                {llmConfigs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
+                    {config.isDefault ? "（默认）" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </header>
 
         <MessageList messages={messages} />

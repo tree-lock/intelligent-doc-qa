@@ -11,11 +11,13 @@ function App() {
     currentChatId,
     currentSession,
     draftPendingDocuments,
+    draftModelConfigId,
     onStartChat,
     onOpenRecentChat,
     onSendMessage,
     isSendingMessage,
     onPendingDocumentsChange,
+    onModelConfigChange,
   } = useAppChatState(sessions, setSessions);
 
   const routeContext = useMemo<AppRouteContextValue>(
@@ -24,18 +26,22 @@ function App() {
       currentChatId,
       currentSession,
       draftPendingDocuments,
+      draftModelConfigId,
       onSendMessage,
       isSendingMessage,
       onPendingDocumentsChange,
+      onModelConfigChange,
     }),
     [
       onStartChat,
       currentChatId,
       currentSession,
       draftPendingDocuments,
+      draftModelConfigId,
       onSendMessage,
       isSendingMessage,
       onPendingDocumentsChange,
+      onModelConfigChange,
     ],
   );
 

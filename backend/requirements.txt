@@ -5,3 +5,7 @@ python-dotenv
 python-multipart
 langchain
 langchain-openai
+sqlalchemy
+aiosqlite
+langchain-community
+sqlite-vec
