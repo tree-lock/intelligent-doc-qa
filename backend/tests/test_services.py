@@ -47,6 +47,22 @@ class FakeLLMGateway(LLMGateway):
             f"{message} | chunks={chunk_count} | history={history_count}"
         )
 
+    def generate_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ):
+        full = self.generate(
+            config=config,
+            message=message,
+            relevant_chunks=relevant_chunks,
+            recent_messages=recent_messages,
+        )
+        yield full
+
     def test_connection(self, *, config: dict) -> str:
         return f"ok:{config['provider']}:{config['model_name']}"
 
@@ -61,6 +77,18 @@ class FailingLLMGateway(LLMGateway):
         recent_messages: list[dict],
     ) -> str:
         raise AssertionError("generate should not be called in connectivity test")
+
+    def generate_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ):
+        raise AssertionError(
+            "generate_stream should not be called in connectivity test"
+        )
 
     def test_connection(self, *, config: dict) -> str:
         from fastapi import HTTPException, status
@@ -437,6 +465,48 @@ class BackendServiceTests(unittest.TestCase):
         self.assertIn("createdAt", payload)
         self.assertIn("references", payload)
 
+    def test_chat_completion_stream_endpoint_returns_sse(self) -> None:
+        import json as json_module
+
+        document = self.document_service.create_document_from_text(
+            DocumentCreateRequest(
+                title="Stream spec",
+                plainText="流式接口返回 SSE，最后一条为 done。",
+                type="txt",
+            )
+        )
+        app = create_app()
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/chat/completions/stream",
+                json={
+                    "message": "流式输出测试",
+                    "documents": [document.model_dump(by_alias=True)],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/event-stream", response.headers.get("content-type", ""))
+        text = response.text
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        data_lines = [l[6:] for l in lines if l.startswith("data: ")]
+        self.assertGreater(len(data_lines), 0)
+        content_found = False
+        done_found = False
+        for data in data_lines:
+            try:
+                event = json_module.loads(data)
+            except json_module.JSONDecodeError:
+                continue
+            if "content" in event:
+                content_found = True
+            if event.get("done") is True:
+                done_found = True
+                self.assertIn("sessionId", event)
+        self.assertTrue(content_found, "expected at least one content event")
+        self.assertTrue(done_found, "expected a done event")
+
     def test_system_service_crud_and_secret_retention(self) -> None:
         created = self.system_service.create_llm_config(
             LLMConfigCreateRequest(
@@ -513,6 +583,65 @@ class BackendServiceTests(unittest.TestCase):
 
         self.assertFalse(response.ok)
         self.assertIn("connection refused", response.detail)
+
+    def test_system_service_connectivity_uses_stored_key_when_config_id_provided(
+        self,
+    ) -> None:
+        """When apiKey is omitted but configId is provided, backend uses stored key."""
+        created = self.system_service.create_llm_config(
+            LLMConfigCreateRequest(
+                name="OpenAI 连通性测试用",
+                provider="openai",
+                apiKey="sk-stored-key-for-test",
+                modelName="gpt-4o-mini",
+                temperature=0.7,
+                topP=0.9,
+                maxTokens=2000,
+                isDefault=False,
+            )
+        )
+        try:
+            service_with_fake_gateway = SystemService(
+                self.system_repository,
+                get_settings(),
+                llm_gateway=FakeLLMGateway(),
+            )
+            response = service_with_fake_gateway.test_llm_config(
+                LLMConfigTestRequest(
+                    provider="openai",
+                    modelName="gpt-4o-mini",
+                    api_key=None,
+                    config_id=created.id,
+                )
+            )
+
+            self.assertTrue(response.ok)
+            self.assertIn("openai", response.detail)
+            self.assertIn("gpt-4o-mini", response.detail)
+        finally:
+            self.system_service.delete_llm_config(created.id)
+
+    def test_system_service_connectivity_returns_404_when_config_id_not_found(
+        self,
+    ) -> None:
+        from fastapi import status
+
+        service_with_fake_gateway = SystemService(
+            self.system_repository,
+            get_settings(),
+            llm_gateway=FakeLLMGateway(),
+        )
+        with self.assertRaises(HTTPException) as ctx:
+            service_with_fake_gateway.test_llm_config(
+                LLMConfigTestRequest(
+                    provider="openai",
+                    modelName="gpt-4o-mini",
+                    api_key=None,
+                    config_id="00000000-0000-0000-0000-000000000000",
+                )
+            )
+        self.assertEqual(ctx.exception.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("not found", ctx.exception.detail.lower())
 
     def test_system_endpoints_and_chat_model_metadata(self) -> None:
         app = create_app()

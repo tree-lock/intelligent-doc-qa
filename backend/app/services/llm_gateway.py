@@ -1,7 +1,9 @@
 import json
+from collections.abc import Iterator
 from typing import Protocol
 from urllib import error, request
 
+import httpx
 from fastapi import HTTPException, status
 
 
@@ -14,6 +16,15 @@ class LLMGateway(Protocol):
         relevant_chunks: list[dict],
         recent_messages: list[dict],
     ) -> str: ...
+
+    def generate_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ) -> Iterator[str]: ...
 
     def test_connection(self, *, config: dict) -> str: ...
 
@@ -59,6 +70,35 @@ class HTTPModelGateway:
             detail=f"Provider '{provider}' is not supported for chat completions.",
         )
 
+    def generate_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ) -> Iterator[str]:
+        provider = str(config["provider"]).lower()
+        if provider == "claude":
+            yield from self._call_claude_stream(
+                config=config,
+                message=message,
+                relevant_chunks=relevant_chunks,
+                recent_messages=recent_messages,
+            )
+        elif provider in {"openai", "local", "community"}:
+            yield from self._call_openai_compatible_stream(
+                config=config,
+                message=message,
+                relevant_chunks=relevant_chunks,
+                recent_messages=recent_messages,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Provider '{provider}' is not supported for chat completions.",
+            )
+
     def _call_openai_compatible(
         self,
         *,
@@ -98,6 +138,75 @@ class HTTPModelGateway:
                 detail="OpenAI-compatible provider returned an unexpected response.",
             ) from exc
         return self._normalize_message_content(content)
+
+    def _call_openai_compatible_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ) -> Iterator[str]:
+        provider = str(config["provider"]).lower()
+        endpoint = self._resolve_openai_endpoint(
+            provider=provider,
+            api_base=str(config.get("api_base") or ""),
+        )
+        messages = self._build_openai_messages(
+            message=message,
+            relevant_chunks=relevant_chunks,
+            recent_messages=recent_messages,
+        )
+        payload = {
+            "model": config["model_name"],
+            "messages": messages,
+            "temperature": float(config["temperature"]),
+            "top_p": float(config["top_p"]),
+            "max_tokens": int(config["max_tokens"]),
+            "stream": True,
+        }
+        headers = {"Content-Type": "application/json"}
+        api_key = str(config.get("api_key") or "").strip()
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        with httpx.Client(timeout=60.0) as client:
+            with client.stream(
+                "POST",
+                endpoint,
+                json=payload,
+                headers=headers,
+            ) as response:
+                if response.status_code >= 400:
+                    try:
+                        body = response.read().decode("utf-8")
+                        detail = body or f"Upstream model request failed: {response.status_code}"
+                    except Exception:
+                        detail = f"Upstream model request failed: {response.status_code}"
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=detail,
+                    ) from None
+                buffer = ""
+                for chunk in response.iter_text():
+                    buffer += chunk
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
+                        if line.startswith("data: "):
+                            data = line[6:].strip()
+                            if data == "[DONE]":
+                                return
+                            try:
+                                obj = json.loads(data)
+                            except json.JSONDecodeError:
+                                continue
+                            try:
+                                delta = obj.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content")
+                                if isinstance(content, str) and content:
+                                    yield content
+                            except (KeyError, IndexError, TypeError):
+                                pass
 
     def _call_claude(
         self,
@@ -149,6 +258,75 @@ class HTTPModelGateway:
                 detail="Claude provider returned an empty completion.",
             )
         return content
+
+    def _call_claude_stream(
+        self,
+        *,
+        config: dict,
+        message: str,
+        relevant_chunks: list[dict],
+        recent_messages: list[dict],
+    ) -> Iterator[str]:
+        endpoint = self._resolve_claude_endpoint(
+            api_base=str(config.get("api_base") or "")
+        )
+        system_prompt = self._build_system_prompt()
+        messages = self._build_anthropic_messages(
+            message=message,
+            relevant_chunks=relevant_chunks,
+            recent_messages=recent_messages,
+        )
+        payload = {
+            "model": config["model_name"],
+            "system": system_prompt,
+            "messages": messages,
+            "temperature": float(config["temperature"]),
+            "top_p": float(config["top_p"]),
+            "max_tokens": int(config["max_tokens"]),
+            "stream": True,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": str(config.get("api_key") or ""),
+            "anthropic-version": "2023-06-01",
+        }
+        with httpx.Client(timeout=60.0) as client:
+            with client.stream(
+                "POST",
+                endpoint,
+                json=payload,
+                headers=headers,
+            ) as response:
+                if response.status_code >= 400:
+                    try:
+                        body = response.read().decode("utf-8")
+                        detail = body or f"Upstream model request failed: {response.status_code}"
+                    except Exception:
+                        detail = f"Upstream model request failed: {response.status_code}"
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=detail,
+                    ) from None
+                buffer = ""
+                for chunk in response.iter_text():
+                    buffer += chunk
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
+                        if line.startswith("data: "):
+                            data = line[6:].strip()
+                            if not data:
+                                continue
+                            try:
+                                obj = json.loads(data)
+                            except json.JSONDecodeError:
+                                continue
+                            if obj.get("type") == "content_block_delta":
+                                delta = obj.get("delta") or {}
+                                if delta.get("type") == "text_delta":
+                                    text = delta.get("text")
+                                    if isinstance(text, str) and text:
+                                        yield text
 
     def _post_json(self, *, endpoint: str, payload: dict, headers: dict[str, str]) -> dict:
         req = request.Request(

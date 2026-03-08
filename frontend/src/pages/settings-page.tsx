@@ -488,28 +488,28 @@ export function SettingsPage() {
           ) : null}
         </section>
 
-        <footer className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-sm">
+        <footer className="flex flex-col items-end justify-between gap-2">
+          <div className="min-w-0 flex-1 text-sm">
             {saveStatusText ? (
               <span
-                className={
+                className={`wrap-break-word ${
                   saveStatus === "success" ? "text-emerald-600" : "text-red-600"
-                }
+                }`}
               >
                 {saveStatusText}
               </span>
             ) : null}
             {!saveStatusText && testStatusText ? (
               <span
-                className={
+                className={`wrap-break-word ${
                   testStatus === "success" ? "text-emerald-600" : "text-red-600"
-                }
+                }`}
               >
                 {testStatusText}
               </span>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="shrink-0 flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"

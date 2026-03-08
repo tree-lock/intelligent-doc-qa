@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterator
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -115,6 +116,100 @@ class ChatService:
             provider=provider,
             modelName=model_name,
         )
+
+    def create_completion_stream(
+        self, payload: ChatCompletionRequest
+    ) -> Iterator[dict]:
+        session_id = payload.session_id or str(uuid.uuid4())
+        session = self.chat_repository.get_session(session_id)
+        created_at = utc_now_iso()
+
+        if session is None:
+            self.chat_repository.create_session(
+                session_id=session_id,
+                title=self._create_session_title(payload.message),
+                created_at=created_at,
+                loaded_documents=[
+                    document.model_dump(by_alias=True) for document in payload.documents
+                ],
+                pending_documents=[],
+            )
+
+        recent_messages = self.chat_repository.list_messages(session_id)
+        selected_chunks = self.document_repository.list_chunks(
+            [document.id for document in payload.documents]
+        )
+        if not selected_chunks:
+            selected_chunks = self._build_fallback_chunks(payload)
+
+        relevant_chunks = self.rag_service.select_relevant_chunks(
+            message=payload.message,
+            chunks=selected_chunks,
+            document_ids=[document.id for document in payload.documents],
+        )
+        references = self._collect_references(relevant_chunks)
+        selected_model_config = self._resolve_llm_config(payload.model_config_id)
+
+        self.chat_repository.add_message(
+            session_id=session_id,
+            role="user",
+            content=payload.message,
+            created_at=created_at,
+        )
+
+        if selected_model_config is None:
+            content, references = self.rag_service.build_answer(
+                message=payload.message,
+                relevant_chunks=relevant_chunks,
+                recent_messages=recent_messages,
+            )
+            model_config_id = payload.model_config_id
+            provider = "local-rag"
+            model_name = "extractive-summary"
+            yield {"content": content}
+        else:
+            content_parts: list[str] = []
+            for delta in self.llm_gateway.generate_stream(
+                config=selected_model_config,
+                message=payload.message,
+                relevant_chunks=relevant_chunks,
+                recent_messages=recent_messages,
+            ):
+                content_parts.append(delta)
+                yield {"content": delta}
+            content = "".join(content_parts)
+            model_config_id = str(selected_model_config["id"])
+            provider = str(selected_model_config["provider"])
+            model_name = str(selected_model_config["model_name"])
+
+        assistant_created_at = utc_now_iso()
+        self.chat_repository.add_message(
+            session_id=session_id,
+            role="assistant",
+            content=content,
+            created_at=assistant_created_at,
+        )
+        self.chat_repository.update_session(
+            session_id=session_id,
+            updated_at=assistant_created_at,
+            loaded_documents=[
+                document.model_dump(by_alias=True) for document in payload.documents
+            ],
+            pending_documents=[],
+            current_model_config_id=model_config_id,
+            current_provider=provider,
+            current_model_name=model_name,
+        )
+
+        yield {
+            "done": True,
+            "sessionId": session_id,
+            "createdAt": assistant_created_at,
+            "references": references,
+            "modelConfigId": model_config_id,
+            "provider": provider,
+            "modelName": model_name,
+        }
 
     def _build_fallback_chunks(self, payload: ChatCompletionRequest) -> list[dict]:
         chunks: list[dict] = []

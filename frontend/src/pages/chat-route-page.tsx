@@ -1,4 +1,5 @@
 import { useAppRouteContext } from "../app/route-context";
+import type { ChatMessage } from "../types";
 import { ChatPage } from "./chat-page";
 
 function ChatRoutePage() {
@@ -6,6 +7,7 @@ function ChatRoutePage() {
     currentChatId,
     currentSession,
     optimisticUserMessage,
+    streamingAssistantMessage,
     draftPendingDocuments,
     draftModelConfigId,
     onSendMessage,
@@ -14,9 +16,18 @@ function ChatRoutePage() {
     onModelConfigChange,
   } = useAppRouteContext();
 
-  const messages = [
+  const messages: ChatMessage[] = [
     ...(currentSession?.messages ?? []),
     ...(optimisticUserMessage ? [optimisticUserMessage] : []),
+    ...(streamingAssistantMessage
+      ? [
+          {
+            id: streamingAssistantMessage.id,
+            role: "assistant" as const,
+            content: streamingAssistantMessage.content,
+          },
+        ]
+      : []),
   ];
 
   return (

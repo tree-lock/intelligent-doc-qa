@@ -321,9 +321,15 @@ export function useSystemSettings() {
     }
 
     try {
-      const result = await testMutation.mutateAsync(
-        toConnectivityPayload(trimmedSettings),
-      );
+      const payload = toConnectivityPayload(trimmedSettings);
+      if (
+        trimmedSettings.hasApiKey &&
+        !trimmedSettings.apiKey.trim() &&
+        selectedConfigId
+      ) {
+        payload.configId = selectedConfigId;
+      }
+      const result = await testMutation.mutateAsync(payload);
       setTestStatus(result.ok ? "success" : "error");
       setTestMessage(
         result.detail ?? (result.ok ? "连通性检测成功" : "连通性检测失败"),

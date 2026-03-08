@@ -61,6 +61,7 @@ class LLMConfigTestRequest(BaseModel):
     api_key: str | None = Field(default=None, alias="apiKey")
     api_base: str | None = Field(default=None, alias="apiBase")
     model_name: str = Field(alias="modelName", min_length=1)
+    config_id: str | None = Field(default=None, alias="configId")
 
     model_config = ConfigDict(populate_by_name=True)
 

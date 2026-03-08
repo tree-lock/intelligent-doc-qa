@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { APP_ROUTE_PATH, getChatRoutePath } from "../app/route-config";
@@ -14,8 +14,16 @@ import {
   sortSessionsByUpdatedAtDesc,
 } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
+import {
+  sendChatMessageStream,
+  type StreamDoneMeta,
+} from "../lib/api/chat";
 import { useLLMConfigsQuery } from "./use-llm-configs-query";
-import { useSendChatMessageMutation } from "./use-send-chat-message-mutation";
+
+export type StreamingAssistantMessage = {
+  id: string;
+  content: string;
+};
 
 export function useAppChatState(
   sessions: ChatSession[],
@@ -23,14 +31,16 @@ export function useAppChatState(
 ) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { mutateAsync: sendChatMessage, isPending: isSendingMessage } =
-    useSendChatMessageMutation();
   const { data: llmConfigs = [] } = useLLMConfigsQuery();
   const [draftPendingDocuments, setDraftPendingDocuments] = useState<
     DocumentItem[]
   >([]);
   const [optimisticUserMessage, setOptimisticUserMessage] =
     useState<ChatMessage | null>(null);
+  const [streamingAssistantMessage, setStreamingAssistantMessage] = useState<
+    StreamingAssistantMessage | null
+  >(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [draftModelConfigId, setDraftModelConfigId] = useState<
     string | undefined
   >();
@@ -75,6 +85,8 @@ export function useAppChatState(
     [navigate],
   );
 
+  const streamedContentRef = useRef("");
+
   const onSendMessage = useCallback(
     async (content: string) => {
       const now = new Date().toISOString();
@@ -91,46 +103,38 @@ export function useAppChatState(
       };
 
       setOptimisticUserMessage(userMessage);
+      streamedContentRef.current = "";
+      setStreamingAssistantMessage({ id: `m-${Date.now()}-stream`, content: "" });
+      setIsSendingMessage(true);
 
-      try {
-        const currentDocuments =
-          currentChatId === NEW_CHAT_ID
-            ? draftPendingDocuments
-            : (() => {
-                if (!currentSession) {
-                  return [] as DocumentItem[];
-                }
-
-                const documentMap = new Map<string, DocumentItem>();
-                for (const document of currentSession.loadedDocuments) {
+      const currentDocuments =
+        currentChatId === NEW_CHAT_ID
+          ? draftPendingDocuments
+          : (() => {
+              if (!currentSession) {
+                return [] as DocumentItem[];
+              }
+              const documentMap = new Map<string, DocumentItem>();
+              for (const document of currentSession.loadedDocuments) {
+                documentMap.set(document.id, document);
+              }
+              for (const document of currentSession.pendingDocuments) {
+                if (!documentMap.has(document.id)) {
                   documentMap.set(document.id, document);
                 }
-                for (const document of currentSession.pendingDocuments) {
-                  if (!documentMap.has(document.id)) {
-                    documentMap.set(document.id, document);
-                  }
-                }
-                return Array.from(documentMap.values());
-              })();
+              }
+              return Array.from(documentMap.values());
+            })();
 
-        const assistantReply = await sendChatMessage({
-          message: content,
-          documents: currentDocuments,
-          sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
-          modelConfigId:
-            currentChatId === NEW_CHAT_ID
-              ? draftModelConfigId
-              : currentSession?.currentModelConfigId,
-        });
-
+      const finishStream = (assistantContent: string, meta: StreamDoneMeta) => {
         const assistantMessage: ChatMessage = {
           id: `m-${Date.now()}-assistant`,
           role: "assistant",
-          content: assistantReply.content,
+          content: assistantContent,
         };
 
         if (currentChatId === NEW_CHAT_ID) {
-          const newChatId = assistantReply.sessionId ?? createChatId();
+          const newChatId = meta.sessionId ?? createChatId();
           const newSession: ChatSession = {
             id: newChatId,
             title: createSessionTitle(content),
@@ -138,61 +142,96 @@ export function useAppChatState(
             loadedDocuments: draftPendingDocuments,
             pendingDocuments: [],
             currentModelConfigId:
-              assistantReply.modelConfigId ?? selectedModel?.id,
+              meta.modelConfigId ?? selectedModel?.id,
             currentProvider:
-              assistantReply.provider ?? selectedModel?.provider ?? "",
+              meta.provider ?? selectedModel?.provider ?? "",
             currentModelName:
-              assistantReply.modelName ?? selectedModel?.modelName ?? "",
+              meta.modelName ?? selectedModel?.modelName ?? "",
             createdAt: now,
             updatedAt: now,
           };
-
           setSessions((prev) =>
             sortSessionsByUpdatedAtDesc([newSession, ...prev]),
           );
           navigate(getChatRoutePath(newChatId));
-          return;
+        } else {
+          const targetSessionId = meta.sessionId ?? currentChatId;
+          setSessions((prev) =>
+            sortSessionsByUpdatedAtDesc(
+              prev.map((session) => {
+                if (session.id !== targetSessionId) {
+                  return session;
+                }
+                return {
+                  ...session,
+                  loadedDocuments: [
+                    ...session.loadedDocuments,
+                    ...session.pendingDocuments.filter(
+                      (pendingDocument) =>
+                        !session.loadedDocuments.some(
+                          (loadedDocument) =>
+                            loadedDocument.id === pendingDocument.id,
+                        ),
+                    ),
+                  ],
+                  pendingDocuments: [],
+                  messages: [
+                    ...session.messages,
+                    userMessage,
+                    assistantMessage,
+                  ],
+                  currentModelConfigId:
+                    meta.modelConfigId ?? session.currentModelConfigId,
+                  currentProvider:
+                    meta.provider ?? session.currentProvider,
+                  currentModelName:
+                    meta.modelName ?? session.currentModelName,
+                  updatedAt: now,
+                };
+              }),
+            ),
+          );
         }
-
-        const targetSessionId = assistantReply.sessionId ?? currentChatId;
-        setSessions((prev) =>
-          sortSessionsByUpdatedAtDesc(
-            prev.map((session) => {
-              if (session.id !== targetSessionId) {
-                return session;
-              }
-              return {
-                ...session,
-                loadedDocuments: [
-                  ...session.loadedDocuments,
-                  ...session.pendingDocuments.filter(
-                    (pendingDocument) =>
-                      !session.loadedDocuments.some(
-                        (loadedDocument) =>
-                          loadedDocument.id === pendingDocument.id,
-                      ),
-                  ),
-                ],
-                pendingDocuments: [],
-                messages: [...session.messages, userMessage, assistantMessage],
-                currentModelConfigId:
-                  assistantReply.modelConfigId ?? session.currentModelConfigId,
-                currentProvider:
-                  assistantReply.provider ?? session.currentProvider,
-                currentModelName:
-                  assistantReply.modelName ?? session.currentModelName,
-                updatedAt: now,
-              };
-            }),
-          ),
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "发送消息失败，请稍后重试";
-        toast.error(message, { duration: Infinity });
-      } finally {
         setOptimisticUserMessage(null);
-      }
+        setStreamingAssistantMessage(null);
+        setIsSendingMessage(false);
+      };
+
+      await sendChatMessageStream(
+        {
+          message: content,
+          documents: currentDocuments,
+          sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
+          modelConfigId:
+            currentChatId === NEW_CHAT_ID
+              ? draftModelConfigId
+              : currentSession?.currentModelConfigId,
+        },
+        {
+          onChunk: (delta) => {
+            streamedContentRef.current += delta;
+            setStreamingAssistantMessage((prev) =>
+              prev
+                ? { ...prev, content: prev.content + delta }
+                : { id: `m-${Date.now()}-stream`, content: delta },
+            );
+          },
+          onDone: (meta) => {
+            const fullContent = streamedContentRef.current;
+            finishStream(fullContent, meta);
+          },
+          onError: (error) => {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "发送消息失败，请稍后重试";
+            toast.error(message, { duration: Infinity });
+            setOptimisticUserMessage(null);
+            setStreamingAssistantMessage(null);
+            setIsSendingMessage(false);
+          },
+        },
+      );
     },
     [
       currentChatId,
@@ -201,7 +240,6 @@ export function useAppChatState(
       draftPendingDocuments,
       llmConfigs,
       navigate,
-      sendChatMessage,
       setSessions,
     ],
   );
@@ -268,6 +306,7 @@ export function useAppChatState(
     currentChatId,
     currentSession,
     optimisticUserMessage,
+    streamingAssistantMessage,
     draftPendingDocuments,
     draftModelConfigId,
     onStartChat,

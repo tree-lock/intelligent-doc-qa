@@ -168,7 +168,15 @@ class SystemService:
         return (self.settings.mineru_api_token or "").strip() or None
 
     def test_llm_config(self, payload: LLMConfigTestRequest) -> LLMConfigTestResponse:
-        normalized = self._normalize_test_payload(payload)
+        existing: dict | None = None
+        if (not payload.api_key or not str(payload.api_key).strip()) and payload.config_id:
+            existing = self.repository.get_llm_config(payload.config_id)
+            if existing is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="LLM config not found.",
+                )
+        normalized = self._normalize_test_payload(payload, existing=existing)
         try:
             self.llm_gateway.test_connection(config=normalized)
         except HTTPException as exc:
@@ -248,17 +256,24 @@ class SystemService:
             "is_default": bool(is_default),
         }
 
-    def _normalize_test_payload(self, payload: LLMConfigTestRequest) -> dict:
+    def _normalize_test_payload(
+        self, payload: LLMConfigTestRequest, existing: dict | None = None
+    ) -> dict:
+        api_key: str | None = (
+            payload.api_key
+            if (payload.api_key and str(payload.api_key).strip())
+            else None
+        )
         return self._validate_and_normalize(
             name="connectivity-test",
             provider=payload.provider,
-            api_key=payload.api_key,
+            api_key=api_key,
             api_base=payload.api_base,
             model_name=payload.model_name,
             temperature=0,
             top_p=1,
             max_tokens=32,
-            existing=None,
+            existing=existing,
             is_default=False,
         )
 

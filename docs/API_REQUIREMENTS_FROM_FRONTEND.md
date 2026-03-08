@@ -11,6 +11,7 @@
 - `POST /api/v1/documents/upload`
 - `DELETE /api/v1/documents`
 - `POST /api/v1/chat/completions`
+- `POST /api/v1/chat/completions/stream`（流式）
 - `GET /api/v1/chat/sessions`
 - `PUT /api/v1/chat/sessions`
 - `GET /api/v1/system/providers`
@@ -156,6 +157,24 @@
 - 后端会持久化 `chat_sessions` 和 `chat_messages`
 - 若存在 `modelConfigId` 或默认模型配置，后端会按配置真实调用对应 provider
 - 若没有任何可用模型配置，后端会回退到本地最小可解释 RAG
+
+### 4.2 流式发送消息（SSE）
+
+- 方法：`POST`
+- 路径：`/api/v1/chat/completions/stream`
+- 请求体：与 4.1 相同（`message`、`documents`、可选 `sessionId`、`modelConfigId`）
+- 响应：`Content-Type: text/event-stream`，Server-Sent Events
+
+事件格式：
+
+- **内容块**：`data: {"content": "<delta>"}\n\n`（增量文本，可多次）
+- **结束块**：`data: {"done": true, "sessionId": "...", "createdAt": "...", "references": [...], "modelConfigId": "...", "provider": "...", "modelName": "..."}\n\n`
+- **错误**：流中可能发送 `data: {"error": "<message>"}\n\n`；客户端应解析并提示用户
+
+说明：
+
+- 前端 Agent 问答页使用本流式接口实现逐字输出；流结束后通过结束块中的元数据合并会话，无需二次请求。
+- 若请求失败（如 4xx/5xx），响应为非流式 JSON，与普通接口一致。
 
 ## 5. Chat Sessions API
 
@@ -682,6 +701,21 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 | 方法 | `DELETE`                          |
 | 路径 | `/api/v1/system/llm-configs/{id}` |
 | 响应 | `204 No Content`                  |
+
+### 5.6 模型配置连通性测试
+
+| 项目   | 说明                                       |
+| ------ | ------------------------------------------ |
+| 方法   | `POST`                                     |
+| 路径   | `/api/v1/system/llm-configs/test`          |
+| 请求体 | `provider`、`modelName` 必填；`apiKey`、`apiBase`、`configId` 可选 |
+| 响应   | `{ "ok": boolean, "detail": string \| null }` |
+
+说明：
+
+- 用于检测当前配置（provider、modelName、apiBase、apiKey）能否连通对应模型，不写入数据库。
+- **configId（可选）**：当请求中未传或未填写 `apiKey` 时，若传入已存配置的 `configId`，后端将使用该配置中已保存的 API Key 执行本次连通性测试（密钥不返回前端）。适用于前端编辑已有配置时，用户未重新输入密钥即可点击「测试连通性」的场景。
+- 若传入了无效的 `configId`（配置不存在），后端返回 `404`。
 
 ---
 
