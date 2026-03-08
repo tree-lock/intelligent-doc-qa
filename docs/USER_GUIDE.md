@@ -159,4 +159,4 @@ A：检查后端是否已启动、端口是否为 8000；检查前端 `VITE_API_
 **Q：Docker 下前端访问后端 404？**  
 A：前端构建时需将 `VITE_API_BASE_URL` 设为容器内可访问的后端地址（如 `http://backend:8000`），再执行 `docker compose up --build frontend`。
 
-更多接口与错误码说明见 [接口文档](./API.md)，架构说明见 [架构设计文档](./ARCHITECTURE.md)。
+更多接口与错误码说明见 [接口文档](./API.md)，架构说明见 [架构设计文档](./ARCHITECTURE.md)。**部署到服务器**时请阅读 [服务器部署注意事项](./DEPLOYMENT.md)。

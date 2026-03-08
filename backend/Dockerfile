@@ -9,8 +9,8 @@ ENV PORT=8000 \
     DATABASE_URL=sqlite+aiosqlite:///./doc_qa.db \
     CHROMA_PERSIST_PATH=./data/chroma \
     USE_VECTOR_SEARCH=true
-# CORS 为 JSON 数组，部署时按前端域名覆盖
-ENV CORS_ALLOWED_ORIGINS="[\"http://localhost:5173\",\"http://127.0.0.1:5173\"]"
+# CORS 为 JSON 数组，部署时按前端域名覆盖；含 localhost 以支持 Docker 前端 80 端口
+ENV CORS_ALLOWED_ORIGINS="[\"http://localhost:5173\",\"http://127.0.0.1:5173\",\"http://localhost\",\"http://127.0.0.1\"]"
 
 WORKDIR /app
 

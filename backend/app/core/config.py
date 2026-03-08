@@ -1,6 +1,25 @@
+import json
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _parse_list_from_env(v: list[str] | str) -> list[str]:
+    """将环境变量中的 JSON 字符串或逗号分隔字符串解析为 list，确保 CORS 等配置被正确读取。"""
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        v = v.strip()
+        if not v:
+            return []
+        if v.startswith("["):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                pass
+        return [x.strip() for x in v.split(",") if x.strip()]
+    return []
 
 
 class Settings(BaseSettings):
@@ -11,7 +30,16 @@ class Settings(BaseSettings):
     cors_allowed_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost",
+        "http://127.0.0.1",
+        "https://doc-qa-api.zeabur.app",
     ]
+
+    @field_validator("cors_allowed_origins", mode="before")
+    @classmethod
+    def parse_cors_allowed_origins(cls, v: list[str] | str) -> list[str]:
+        return _parse_list_from_env(v)
+
     chunk_size: int = 800
     chunk_overlap: int = 120
     system_providers: list[str] = ["openai", "claude", "local", "community"]

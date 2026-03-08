@@ -11,13 +11,18 @@ services:
       API_PREFIX: /api/v1
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-local}
       VECTOR_STORE: ${VECTOR_STORE:-sqlitevec}
-      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./doc_qa.db}
+      # 生产部署：建议 DATABASE_URL 使用 ./data/doc_qa.db，以便与 chroma 一起通过卷持久化
+      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/doc_qa.db}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173","http://127.0.0.1","http://localhost","https://doc-qa-api.zeabur.app"]}
       DEFAULT_TEMPERATURE: ${DEFAULT_TEMPERATURE:-0.6}
       DEFAULT_TOP_P: ${DEFAULT_TOP_P:-0.9}
       DEFAULT_MAX_TOKENS: ${DEFAULT_MAX_TOKENS:-1024}
       CHUNK_SIZE: ${CHUNK_SIZE:-800}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-120}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-64}
+    volumes:
+      # 持久化数据库与向量库，避免容器重建后数据丢失
+      - doc-qa-data:/app/data
 
   frontend:
     build:
@@ -25,7 +30,8 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
     container_name: doc-qa-frontend
-    depends_on:
-      - backend
     ports:
       - "80:80"
+
+volumes:
+  doc-qa-data:
