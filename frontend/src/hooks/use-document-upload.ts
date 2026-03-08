@@ -6,14 +6,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { APP_ROUTE_PATH } from "../app/route-config";
 import { deleteDocuments, uploadDocuments } from "../lib/api/documents";
+import { fetchMineruTokenStatus } from "../lib/api/system";
+import { isMineruSupportedFile, MINERU_REQUIRED_MESSAGE } from "../lib/mineru";
 import { documentsQueryKey } from "./use-documents-query";
 
 export function useDocumentUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { mutateAsync: uploadFiles, isPending: isUploading } = useMutation({
     mutationFn: uploadDocuments,
@@ -40,13 +45,27 @@ export function useDocumentUpload() {
   });
 
   const appendFiles = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (files.length === 0) {
         return;
       }
+      const hasMineruFile = files.some((f) => isMineruSupportedFile(f.name));
+      if (hasMineruFile) {
+        try {
+          const status = await fetchMineruTokenStatus();
+          if (!status.hasToken) {
+            toast.warning(MINERU_REQUIRED_MESSAGE);
+            navigate(`${APP_ROUTE_PATH.settings}?focus=mineru`);
+            return;
+          }
+        } catch {
+          toast.error("无法获取 MinerU 配置状态，请稍后重试");
+          return;
+        }
+      }
       void uploadFiles(files);
     },
-    [uploadFiles],
+    [navigate, uploadFiles],
   );
 
   const deleteByIds = useCallback(

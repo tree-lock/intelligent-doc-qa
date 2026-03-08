@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { APP_ROUTE_PATH, getChatRoutePath } from "../app/route-config";
+import { type StreamDoneMeta, sendChatMessageStream } from "../lib/api/chat";
 import {
   resolveCurrentChatId,
   shouldRedirectInvalidChatRoute,
@@ -14,10 +15,6 @@ import {
   sortSessionsByUpdatedAtDesc,
 } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
-import {
-  sendChatMessageStream,
-  type StreamDoneMeta,
-} from "../lib/api/chat";
 import { useLLMConfigsQuery } from "./use-llm-configs-query";
 
 export type StreamingAssistantMessage = {
@@ -37,9 +34,8 @@ export function useAppChatState(
   >([]);
   const [optimisticUserMessage, setOptimisticUserMessage] =
     useState<ChatMessage | null>(null);
-  const [streamingAssistantMessage, setStreamingAssistantMessage] = useState<
-    StreamingAssistantMessage | null
-  >(null);
+  const [streamingAssistantMessage, setStreamingAssistantMessage] =
+    useState<StreamingAssistantMessage | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [draftModelConfigId, setDraftModelConfigId] = useState<
     string | undefined
@@ -104,7 +100,10 @@ export function useAppChatState(
 
       setOptimisticUserMessage(userMessage);
       streamedContentRef.current = "";
-      setStreamingAssistantMessage({ id: `m-${Date.now()}-stream`, content: "" });
+      setStreamingAssistantMessage({
+        id: `m-${Date.now()}-stream`,
+        content: "",
+      });
       setIsSendingMessage(true);
 
       const currentDocuments =
@@ -141,12 +140,9 @@ export function useAppChatState(
             messages: [userMessage, assistantMessage],
             loadedDocuments: draftPendingDocuments,
             pendingDocuments: [],
-            currentModelConfigId:
-              meta.modelConfigId ?? selectedModel?.id,
-            currentProvider:
-              meta.provider ?? selectedModel?.provider ?? "",
-            currentModelName:
-              meta.modelName ?? selectedModel?.modelName ?? "",
+            currentModelConfigId: meta.modelConfigId ?? selectedModel?.id,
+            currentProvider: meta.provider ?? selectedModel?.provider ?? "",
+            currentModelName: meta.modelName ?? selectedModel?.modelName ?? "",
             createdAt: now,
             updatedAt: now,
           };
@@ -182,10 +178,8 @@ export function useAppChatState(
                   ],
                   currentModelConfigId:
                     meta.modelConfigId ?? session.currentModelConfigId,
-                  currentProvider:
-                    meta.provider ?? session.currentProvider,
-                  currentModelName:
-                    meta.modelName ?? session.currentModelName,
+                  currentProvider: meta.provider ?? session.currentProvider,
+                  currentModelName: meta.modelName ?? session.currentModelName,
                   updatedAt: now,
                 };
               }),

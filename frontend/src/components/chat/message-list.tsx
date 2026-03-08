@@ -73,7 +73,8 @@ export function MessageList({
             </div>
           ))}
           {isSendingMessage &&
-          (!messages.length || messages[messages.length - 1]?.role !== "assistant") ? (
+          (!messages.length ||
+            messages[messages.length - 1]?.role !== "assistant") ? (
             <div className="mr-auto max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />

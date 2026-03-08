@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  sendChatMessageStream,
-  type SendChatMessagePayload,
-} from "./chat";
+import { type SendChatMessagePayload, sendChatMessageStream } from "./chat";
 
 function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
   return new ReadableStream({
@@ -40,9 +37,9 @@ describe("chat api", () => {
       ],
     };
     const sseBody =
-      "data: {\"content\": \"Hello\"}\n\n" +
-      "data: {\"content\": \" world\"}\n\n" +
-      "data: {\"done\": true, \"sessionId\": \"s1\", \"createdAt\": \"2026-01-01T00:00:00Z\", \"references\": []}\n\n";
+      'data: {"content": "Hello"}\n\n' +
+      'data: {"content": " world"}\n\n' +
+      'data: {"done": true, "sessionId": "s1", "createdAt": "2026-01-01T00:00:00Z", "references": []}\n\n';
     vi.mocked(fetch).mockResolvedValue(
       new Response(streamFromChunks([sseBody]), {
         status: 200,
@@ -96,7 +93,7 @@ describe("chat api", () => {
   });
 
   it("sendChatMessageStream calls onError when stream sends error event", async () => {
-    const sseBody = "data: {\"error\": \"Upstream timeout\"}\n\n";
+    const sseBody = 'data: {"error": "Upstream timeout"}\n\n';
     vi.mocked(fetch).mockResolvedValue(
       new Response(streamFromChunks([sseBody]), {
         status: 200,

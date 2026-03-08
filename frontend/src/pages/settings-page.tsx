@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { APP_ROUTE_PATH } from "../app/route-config";
 import { ParametersSection } from "../components/settings/parameters-section";
 import { SettingsField } from "../components/settings/settings-field";
 import { Button } from "../components/ui/button";
@@ -18,6 +20,10 @@ type InputMode = "form" | "raw";
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const mineruInputRef = useRef<HTMLInputElement | null>(null);
+  const [mineruHighlight, setMineruHighlight] = useState(false);
   const [mineruToken, setMineruToken] = useState("");
   const [inputMode, setInputMode] = useState<InputMode>("form");
   const [rawJsonString, setRawJsonString] = useState(
@@ -83,6 +89,18 @@ export function SettingsPage() {
       setRawJsonError(null);
     }
   }, [draft, inputMode, saveStatus]);
+
+  useEffect(() => {
+    if (searchParams.get("focus") !== "mineru") {
+      return;
+    }
+    setMineruHighlight(true);
+    mineruInputRef.current?.focus();
+    mineruInputRef.current?.scrollIntoView({ behavior: "smooth" });
+    navigate(APP_ROUTE_PATH.settings, { replace: true });
+    const t = setTimeout(() => setMineruHighlight(false), 4000);
+    return () => clearTimeout(t);
+  }, [navigate, searchParams]);
 
   const applyRawJsonToDraft = () => {
     const result = parseRawJsonToDraft(rawJsonString);
@@ -462,16 +480,18 @@ export function SettingsPage() {
                 MinerU API Token
               </label>
               <input
+                ref={mineruInputRef}
                 id="mineru-token"
                 type="password"
                 value={mineruToken}
                 onChange={(e) => setMineruToken(e.target.value)}
+                onBlur={() => setMineruHighlight(false)}
                 placeholder={
                   mineruStatus?.hasToken
                     ? "••••••••••••••••"
                     : "请输入 MinerU API Token"
                 }
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
+                className={`w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none ${mineruHighlight ? "ring-2 ring-primary" : ""}`}
               />
             </div>
             <Button

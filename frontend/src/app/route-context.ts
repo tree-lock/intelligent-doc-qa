@@ -1,7 +1,7 @@
 import { useOutletContext } from "react-router-dom";
+import type { StreamingAssistantMessage } from "../hooks/use-app-chat-state";
 import type { ChatSession } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
-import type { StreamingAssistantMessage } from "../hooks/use-app-chat-state";
 
 export type AppRouteContextValue = {
   onStartChat: (selectedDocs: DocumentItem[]) => void;

@@ -170,8 +170,6 @@ export async function sendChatMessageStream(
       }
     }
   } catch (err) {
-    callbacks.onError(
-      err instanceof Error ? err : new Error(String(err)),
-    );
+    callbacks.onError(err instanceof Error ? err : new Error(String(err)));
   }
 }
