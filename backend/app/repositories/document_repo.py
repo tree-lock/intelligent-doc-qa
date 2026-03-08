@@ -11,7 +11,7 @@ class DocumentRepository:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, name, title, plain_text, doc_type, status, updated_at
+                SELECT id, name, title, plain_text, doc_type, status, updated_at, source_format
                 FROM documents
                 ORDER BY updated_at DESC, name ASC
                 """
@@ -22,7 +22,7 @@ class DocumentRepository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, name, title, plain_text, doc_type, status, updated_at
+                SELECT id, name, title, plain_text, doc_type, status, updated_at, source_format
                 FROM documents
                 WHERE name = ?
                 """,
@@ -39,15 +39,16 @@ class DocumentRepository:
         document_type: str,
         status: str,
         updated_at: str,
+        source_format: str | None = None,
     ) -> dict:
         document_id = str(uuid.uuid4())
         with self.database.connect() as connection:
             connection.execute(
                 """
-                INSERT INTO documents (id, name, title, plain_text, doc_type, status, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO documents (id, name, title, plain_text, doc_type, status, updated_at, source_format)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (document_id, name, title, plain_text, document_type, status, updated_at),
+                (document_id, name, title, plain_text, document_type, status, updated_at, source_format),
             )
         return {
             "id": document_id,
@@ -57,6 +58,7 @@ class DocumentRepository:
             "doc_type": document_type,
             "status": status,
             "updated_at": updated_at,
+            "source_format": source_format,
         }
 
     def replace_chunks(self, document_id: str, chunks: list[str]) -> None:

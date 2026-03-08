@@ -124,6 +124,12 @@ class Database:
                 column_name="current_model_name",
                 definition="TEXT NOT NULL DEFAULT ''",
             )
+            self._ensure_column(
+                connection,
+                table_name="documents",
+                column_name="source_format",
+                definition="TEXT",
+            )
 
     def _ensure_column(
         self,

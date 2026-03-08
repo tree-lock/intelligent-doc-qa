@@ -1,4 +1,17 @@
-# 智能文档问答助手（架构设计 README）
+# 智能文档问答助手
+
+## 文档索引
+
+- **[架构设计文档](docs/ARCHITECTURE.md)**：技术选型、系统架构、模块划分、前后端结构、数据与存储
+- **[使用文档](docs/USER_GUIDE.md)**：安装、启动（本地与 Docker）、环境变量、基本使用、测试、常见问题
+- **[接口文档](docs/API.md)**：REST API 请求/响应约定（Health、Documents、Chat、Sessions、System）
+
+---
+
+```bash
+# 立即运行
+docker compose up --build
+```
 
 ## 1. 项目简介
 

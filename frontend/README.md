@@ -44,7 +44,7 @@ npm install
 bun run dev
 ```
 
-默认启动后可通过 Vite 输出的本地地址访问页面。
+默认启动后可通过 Vite 输出的本地地址访问页面。如需指定后端 API 地址，可复制项目根目录下的 `frontend/.env.example` 为 `frontend/.env`，并修改 `VITE_API_BASE_URL`（默认 `http://localhost:8000`）。
 
 ### 3.3 常用脚本
 

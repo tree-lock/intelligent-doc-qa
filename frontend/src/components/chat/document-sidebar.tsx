@@ -103,7 +103,8 @@ export function DocumentSidebar({
                   ) : null}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {document.type.toUpperCase()} · {document.updatedAt}
+                  {(document.sourceFormat ?? document.type).toUpperCase()} ·{" "}
+                  {document.updatedAt}
                 </div>
               </div>
             );

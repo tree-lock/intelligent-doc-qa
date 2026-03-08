@@ -31,6 +31,8 @@ function normalizeDocument(input: unknown): DocumentItem | null {
   // Backward compatible with old records missing title/plainText.
   const title = typeof doc.title === "string" ? doc.title : doc.name;
   const plainText = typeof doc.plainText === "string" ? doc.plainText : "";
+  const sourceFormat =
+    typeof doc.sourceFormat === "string" ? doc.sourceFormat : undefined;
 
   return {
     id: doc.id,
@@ -40,6 +42,7 @@ function normalizeDocument(input: unknown): DocumentItem | null {
     type: doc.type,
     status: doc.status,
     updatedAt: doc.updatedAt,
+    ...(sourceFormat !== undefined && { sourceFormat }),
   };
 }
 

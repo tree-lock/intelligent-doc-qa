@@ -15,6 +15,7 @@ class DocumentItem(BaseModel):
     type: DocumentType
     status: DocumentStatus
     updated_at: str = Field(alias="updatedAt")
+    source_format: str | None = Field(default=None, alias="sourceFormat")
 
     model_config = ConfigDict(populate_by_name=True)
 

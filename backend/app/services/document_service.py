@@ -8,6 +8,7 @@ from app.repositories.document_repo import DocumentRepository
 from app.repositories.system_repo import SystemRepository
 from app.schemas.documents import DocumentCreateRequest, DocumentItem
 from app.services.mineru_client import (
+    SUPPORTED_EXTENSIONS,
     is_mineru_supported,
     parse_with_mineru,
     validate_mineru_file,
@@ -19,6 +20,17 @@ if TYPE_CHECKING:
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _source_format_from_filename(filename: str) -> str | None:
+    """从文件名提取原始格式（小写、无点），仅当为 MinerU 支持的后缀时返回值。"""
+    if not filename:
+        return None
+    lower = filename.lower()
+    for ext in SUPPORTED_EXTENSIONS:
+        if lower.endswith(ext):
+            return ext.lstrip(".")
+    return None
 
 
 class DocumentService:
@@ -138,6 +150,7 @@ class DocumentService:
                 detail="MinerU 解析结果为空，请检查文件内容。",
             )
 
+        source_format = _source_format_from_filename(filename)
         created = self.repository.create_document(
             name=filename,
             title=filename,
@@ -145,6 +158,7 @@ class DocumentService:
             document_type="markdown",
             status="ready",
             updated_at=utc_now_iso(),
+            source_format=source_format,
         )
         chunks = self.chunk_plain_text(normalized)
         self.repository.replace_chunks(created["id"], chunks)
@@ -254,4 +268,5 @@ class DocumentService:
             type=row["doc_type"],
             status=row["status"],
             updatedAt=row["updated_at"],
+            sourceFormat=row.get("source_format"),
         )

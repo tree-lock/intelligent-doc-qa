@@ -40,7 +40,8 @@ export function DocumentCard({
           {doc.name}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {doc.type.toUpperCase()} · 更新于 {doc.updatedAt}
+          {(doc.sourceFormat ?? doc.type).toUpperCase()} · 更新于{" "}
+          {doc.updatedAt}
         </div>
       </div>
 
