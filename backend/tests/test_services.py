@@ -201,6 +201,7 @@ class BackendServiceTests(unittest.TestCase):
             with self.assertRaises(HTTPException) as ctx:
                 await self.document_service.ingest_uploaded_file(uf)
             self.assertEqual(ctx.exception.status_code, 503)
+            # 若修改 MinerU 未配置时的错误文案（app.services.document_service），需同步更新此处断言。
             self.assertIn("MINERU_API_TOKEN", str(ctx.exception.detail))
 
         asyncio.run(run())

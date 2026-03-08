@@ -34,17 +34,14 @@ export async function sendChatMessageStream(
   options?: SendChatMessageStreamOptions,
 ): Promise<void> {
   const { signal } = options ?? {};
-  const response = await fetch(
-    buildApiUrl("/api/v1/chat/completions/stream"),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      signal,
+  const response = await fetch(buildApiUrl("/api/v1/chat/completions/stream"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(payload),
+    signal,
+  });
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type") ?? "";

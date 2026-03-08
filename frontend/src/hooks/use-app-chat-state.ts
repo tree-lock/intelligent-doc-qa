@@ -246,8 +246,7 @@ export function useAppChatState(
         setOptimisticUserMessage(null);
         setStreamingAssistantMessage(null);
         setIsSendingMessage(false);
-        const isAbort =
-          err instanceof Error && err.name === "AbortError";
+        const isAbort = err instanceof Error && err.name === "AbortError";
         if (!isAbort) {
           const message =
             err instanceof Error ? err.message : "发送消息失败，请稍后重试";

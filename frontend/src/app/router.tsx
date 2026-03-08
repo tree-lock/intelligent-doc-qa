@@ -23,11 +23,7 @@ const SettingsRoutePage = lazyPage(
 const routeErrorElement = <RouteErrorFallback />;
 const pageFallback = (
   <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-    <LoadingPanel
-      title="页面加载中"
-      description="请稍候..."
-      variant="page"
-    />
+    <LoadingPanel title="页面加载中" description="请稍候..." variant="page" />
   </div>
 );
 

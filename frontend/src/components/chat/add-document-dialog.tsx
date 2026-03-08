@@ -1,4 +1,7 @@
+import { Search } from "lucide-react";
 import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
+import { filterDocumentsByQuery } from "../../lib/document-filter";
 import { cn } from "../../lib/utils";
 import type { DocumentItem } from "../../types";
 import { Button } from "../ui/button";
@@ -10,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import { Input } from "../ui/input";
 
 type AddDocumentDialogProps = {
   open: boolean;
@@ -36,8 +40,21 @@ export function AddDocumentDialog({
   isNewChat,
   trigger,
 }: AddDocumentDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredDocuments = useMemo(
+    () => filterDocumentsByQuery(documents, searchQuery),
+    [documents, searchQuery],
+  );
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setSearchQuery("");
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
@@ -49,47 +66,72 @@ export function AddDocumentDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="relative mb-2">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="按名称或标题搜索"
+            className="pl-9"
+            aria-label="按名称或标题搜索文档"
+          />
+        </div>
+
         <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-          {documents.map((document) => {
-            const isLoaded = loadedDocumentIdSet.has(document.id);
-            const isSelected = selectedDocumentIds.includes(document.id);
-            return (
-              <label
-                key={document.id}
-                className={cn(
-                  "flex items-start gap-3 rounded-lg border px-3 py-2",
-                  isLoaded
-                    ? "border-primary/30 bg-primary/10"
-                    : "border-border bg-card",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  disabled={isLoaded}
-                  onChange={(event) =>
-                    onToggle(document.id, event.target.checked)
-                  }
-                  className="mt-0.5 h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm text-foreground">
-                      {document.name}
-                    </span>
-                    {isLoaded ? (
-                      <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">
-                        已加载
+          {documents.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              暂无文档，请先在文档管理页上传。
+            </p>
+          ) : filteredDocuments.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              未找到匹配的文档
+            </p>
+          ) : (
+            filteredDocuments.map((document) => {
+              const isLoaded = loadedDocumentIdSet.has(document.id);
+              const isSelected = selectedDocumentIds.includes(document.id);
+              return (
+                <label
+                  key={document.id}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border px-3 py-2",
+                    isLoaded
+                      ? "border-primary/30 bg-primary/10"
+                      : "border-border bg-card",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    disabled={isLoaded}
+                    onChange={(event) =>
+                      onToggle(document.id, event.target.checked)
+                    }
+                    className="mt-0.5 h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm text-foreground">
+                        {document.name}
                       </span>
-                    ) : null}
+                      {isLoaded ? (
+                        <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">
+                          已加载
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {document.type.toUpperCase()} · {document.updatedAt}
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {document.type.toUpperCase()} · {document.updatedAt}
-                  </div>
-                </div>
-              </label>
-            );
-          })}
+                </label>
+              );
+            })
+          )}
         </div>
 
         <DialogFooter className="sm:justify-between">
@@ -101,7 +143,7 @@ export function AddDocumentDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               取消
             </Button>

@@ -1,9 +1,11 @@
-import { Edit3, MessageCirclePlus, Trash2, Upload } from "lucide-react";
+import { Edit3, MessageCirclePlus, Search, Trash2, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DocumentCard } from "../components/documents/document-card";
 import { DocumentUploadZone } from "../components/documents/document-upload-zone";
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { useDocumentUpload } from "../hooks/use-document-upload";
+import { filterDocumentsByQuery } from "../lib/document-filter";
 import { cn } from "../lib/utils";
 import type { DocumentItem } from "../types";
 
@@ -29,9 +31,14 @@ export function DocumentsPage({
   } = useDocumentUpload();
   const documents = initialDocuments;
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const filteredDocuments = useMemo(
+    () => filterDocumentsByQuery(documents, searchQuery),
+    [documents, searchQuery],
+  );
 
   const toggleSelected = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -118,6 +125,23 @@ export function DocumentsPage({
             </div>
           </div>
 
+          <div className="mb-3 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="按名称或标题搜索"
+                className="pl-9"
+                aria-label="按名称或标题搜索文档"
+              />
+            </div>
+          </div>
+
           <div className="mb-3">
             <DocumentUploadZone
               fileInputRef={fileInputRef}
@@ -130,9 +154,13 @@ export function DocumentsPage({
             <div className="rounded-xl border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground">
               还没有文档，点击右上角"上传文档"或直接拖拽文件到此区域。
             </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="rounded-xl border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground">
+              未找到匹配的文档
+            </div>
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {documents.map((doc) => (
+              {filteredDocuments.map((doc) => (
                 <DocumentCard
                   key={doc.id}
                   doc={doc}

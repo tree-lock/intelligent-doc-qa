@@ -26,8 +26,10 @@
 - `GET /api/v1/system/llm-configs`
 - `POST /api/v1/system/llm-configs`
 - `POST /api/v1/system/llm-configs/test`
-- `PUT /api/v1/system/llm-configs/{id}`
-- `DELETE /api/v1/system/llm-configs/{id}`
+- `PUT /api/v1/system/llm-configs/{config_id}`
+- `DELETE /api/v1/system/llm-configs/{config_id}`
+- `GET /api/v1/system/mineru-token`、`PUT /api/v1/system/mineru-token`（MinerU Token 状态与更新）
+- `POST /api/v1/chat/completions/stream`（流式问答）
 - `GET /api/v1/health`
 
 当前行为：
@@ -44,7 +46,7 @@
 
 当前限制：
 
-- 文档格式只支持 `TXT` 与 `Markdown`
+- 默认支持 `TXT`、`Markdown`；配置 MinerU Token（系统设置或环境变量）后，支持 PDF、Word、PPT、图片、HTML 等格式
 - 若未配置任何模型，聊天会回退到本地可解释摘要式 RAG
 
 ## 3. 技术栈
@@ -106,6 +108,8 @@ docker compose up --build backend
 | `CORS_ALLOWED_ORIGINS` | 前端来源白名单 | `["http://localhost:5173","http://127.0.0.1:5173"]` |
 | `CHUNK_SIZE` | 文档切块大小 | `800` |
 | `CHUNK_OVERLAP` | 文档切块重叠 | `120` |
+| `chroma_persist_path` | Chroma 向量库持久化目录 | `./data/chroma` |
+| `mineru_api_token` | MinerU 文档解析 Token（可选，也可在系统设置中配置） | 空 |
 
 ## 6. 数据与分层
 
@@ -129,11 +133,13 @@ SQLite 表：
 - `chat_sessions`：会话元数据
 - `chat_messages`：消息历史
 
+向量检索使用 Chroma（`VectorStoreService`，持久化目录由 `chroma_persist_path` 配置）；文档与会话元数据在 SQLite。
+
 数据流：
 
 1. 上传文件或直接提交文本
 2. 后端规范化文本并写入 `documents`
-3. 服务层切块并写入 `document_chunks`
+3. 服务层切块并写入 `document_chunks`，并同步到 Chroma 向量库
 4. 提问时按已选文档检索相关片段
 5. 生成带引用的最小 RAG 回答并持久化会话消息
 
@@ -177,8 +183,11 @@ SQLite 表：
 ### 7.3 Chat API
 
 - `POST /api/v1/chat/completions`
+- `POST /api/v1/chat/completions/stream`（流式应答，SSE）
+- `GET /api/v1/chat/sessions`
+- `PUT /api/v1/chat/sessions`
 
-请求示例：
+请求示例（completions）：
 
 ```json
 {
@@ -213,16 +222,15 @@ SQLite 表：
 }
 ```
 
-## 8. 测试
-
 ### 7.4 System API
 
 - `GET /api/v1/system/providers`
 - `GET /api/v1/system/llm-configs`
 - `POST /api/v1/system/llm-configs`
-- `POST /api/v1/system/llm-configs/test`
-- `PUT /api/v1/system/llm-configs/{id}`
-- `DELETE /api/v1/system/llm-configs/{id}`
+- `POST /api/v1/system/llm-configs/test`（模型连通性检测）
+- `PUT /api/v1/system/llm-configs/{config_id}`
+- `DELETE /api/v1/system/llm-configs/{config_id}`
+- `GET /api/v1/system/mineru-token`、`PUT /api/v1/system/mineru-token`（MinerU Token 查询与设置）
 
 连通性检测请求示例：
 
@@ -260,10 +268,20 @@ SQLite 表：
 
 运行方式：
 
+**推荐使用 `make test`**（会自动创建虚拟环境、安装依赖并执行全部测试）：
+
+```bash
+cd /Users/treezlock/code/work/backend
+make test
+```
+
+若需单独运行 unittest，请先激活虚拟环境并安装依赖（否则会报 `ModuleNotFoundError: No module named 'fastapi'`）：
+
 ```bash
 cd /Users/treezlock/code/work/backend
 source .venv/bin/activate
-python -m unittest tests.test_services
+make install-dev
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ## 9. 验证记录

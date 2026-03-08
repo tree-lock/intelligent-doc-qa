@@ -1,6 +1,9 @@
-# 前端 API 契约对齐文档
+# 前端 API 契约与需求文档
 
-> 本文档描述当前仓库里已经实现并验证过的 P0 后端契约，基准来源仍然是前端 `documents/chat` API 调用。
+本文档由两部分组成：
+
+- **第一部分（§1–§8）**：**前端 API 契约对齐文档**。描述当前仓库已实现并验证的 P0 后端契约，供前后端联调与接口校对使用。
+- **第二部分（§1 概述起）**：**前端 API 需求文档**。由前端代码分析得出的 API 规格与调用来源；当前后端已与第一部分契约对齐，第二部分中“与当前后端差异”等描述已收敛为“已对齐”，详见第一部分与 backend README。
 
 ## 1. 范围
 
@@ -17,8 +20,9 @@
 - `GET /api/v1/system/providers`
 - `GET /api/v1/system/llm-configs`
 - `POST /api/v1/system/llm-configs`
-- `PUT /api/v1/system/llm-configs/{id}`
-- `DELETE /api/v1/system/llm-configs/{id}`
+- `PUT /api/v1/system/llm-configs/{config_id}`
+- `DELETE /api/v1/system/llm-configs/{config_id}`
+- `GET /api/v1/system/mineru-token`、`PUT /api/v1/system/mineru-token`
 - `GET /api/v1/health`
 
 ## 2. 基础约定
@@ -290,7 +294,7 @@
 ### 5.4 更新模型配置
 
 - 方法：`PUT`
-- 路径：`/api/v1/system/llm-configs/{id}`
+- 路径：`/api/v1/system/llm-configs/{config_id}`（路径参数为配置 ID）
 
 说明：
 
@@ -301,8 +305,16 @@
 ### 5.5 删除模型配置
 
 - 方法：`DELETE`
-- 路径：`/api/v1/system/llm-configs/{id}`
+- 路径：`/api/v1/system/llm-configs/{config_id}`
 - 响应：`204 No Content`
+
+### 5.6 MinerU Token（可选）
+
+- 方法：`GET` / `PUT`
+- 路径：`/api/v1/system/mineru-token`
+- 用途：查询或设置 MinerU API Token，用于 PDF、Word、PPT、图片、HTML 等格式的文档解析（上传时若配置了 Token 则走 MinerU 解析）。
+- GET 响应示例：`{ "hasToken": true }` 或 `{ "hasToken": false }`（不返回明文 Token）。
+- PUT 请求体：`{ "token": "string | null" }`，传 `null` 或空字符串表示清除。
 
 ## 7. Health API
 
@@ -463,11 +475,7 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 
 **后端处理**：直接将 `plainText` 存入数据库，无需文件解析。
 
-**与当前后端差异**：
-
-- 后端 `POST /documents` 仅支持单文件
-- 后端 `DocumentCreateResponse` 仅有 `id`、`filename`、`created_at`，缺少 `plainText`、`type`、`status`、`title` 等字段
-- 需新增「直接提交文字」的创建方式
+**当前后端**：已对齐。后端支持 `POST /documents` 直接提交文字（JSON）与 `POST /documents/upload` 多文件上传，返回完整 `DocumentItem`。详见本文档第一部分 §3。
 
 ---
 
@@ -482,10 +490,7 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 | 请求体 | `{ "ids": ["id1", "id2", ...] }`           |
 | 响应   | `204 No Content` 或 `{ "message": "..." }` |
 
-**与当前后端差异**：
-
-- 后端仅支持 `DELETE /documents/{document_id}` 单条删除
-- 前端需要批量删除能力
+**当前后端**：已对齐。后端支持 `DELETE /documents`，请求体 `{ "ids": [...] }` 批量删除。详见本文档第一部分 §3.4。
 
 ---
 
@@ -533,11 +538,7 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 }
 ```
 
-**与当前后端差异**：
-
-- 后端 `ChatCompletionRequest` 仅有 `question` 与 `session_id`，**未接收文档列表**
-- 前端依赖每次请求携带 `documents`，用于基于文档内容的检索与生成（RAG）
-- 后端响应为 `answer`，前端期望字段名为 `content`
+**当前后端**：已对齐。后端接收 `message`、`documents`、可选 `sessionId`、`modelConfigId`，响应 `content`、`sessionId`、`createdAt`、`references` 等；并支持流式 `POST /api/v1/chat/completions/stream`。详见本文档第一部分 §4。
 
 ---
 
@@ -684,7 +685,7 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 | 项目   | 说明                              |
 | ------ | --------------------------------- |
 | 方法   | `PUT`                             |
-| 路径   | `/api/v1/system/llm-configs/{id}` |
+| 路径   | `/api/v1/system/llm-configs/{config_id}` |
 | 请求体 | `LLMConfigUpdate`，支持部分更新   |
 | 响应   | 更新后的 `LLMConfigItem`          |
 
@@ -699,7 +700,7 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 | 项目 | 说明                              |
 | ---- | --------------------------------- |
 | 方法 | `DELETE`                          |
-| 路径 | `/api/v1/system/llm-configs/{id}` |
+| 路径 | `/api/v1/system/llm-configs/{config_id}` |
 | 响应 | `204 No Content`                  |
 
 ### 5.6 模型配置连通性测试
@@ -717,18 +718,23 @@ _文档版本：2.0 | 状态：P0 已实现并校验_
 - **configId（可选）**：当请求中未传或未填写 `apiKey` 时，若传入已存配置的 `configId`，后端将使用该配置中已保存的 API Key 执行本次连通性测试（密钥不返回前端）。适用于前端编辑已有配置时，用户未重新输入密钥即可点击「测试连通性」的场景。
 - 若传入了无效的 `configId`（配置不存在），后端返回 `404`。
 
+### 5.7 MinerU Token（可选）
+
+| 项目 | 说明 |
+| ---- | ---- |
+| 方法 | `GET` / `PUT` |
+| 路径 | `/api/v1/system/mineru-token` |
+| 用途 | 查询或设置 MinerU API Token，用于 PDF、Word、PPT、图片、HTML 等格式上传解析。GET 返回 `{ "hasToken": boolean }`；PUT 请求体 `{ "token": string \| null }`。 |
+
 ---
 
 ## 6. 对接差异汇总
 
-| API      | 前端期望                                                   | 当前后端                                 | 建议                                              |
-| -------- | ---------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------- |
-| 文档列表 | 含 plainText、type、status、title                          | 仅 id、filename、created_at              | 扩展响应字段                                      |
-| 文档创建 | 上传文档（读成文字后入库）或直接提交文字；仅存文本不存文件 | 单文件、基础 Create 响应                 | 支持多文件上传 + 直接提交文字；读文件为文本后入库 |
-| 文档删除 | 批量 `ids`                                                 | 单条 `/{id}`                             | 增加批量删除或兼容批量                            |
-| 聊天     | `message` + `documents`，响应 `content`                    | `question` + `session_id`，响应 `answer` | 增加 documents、统一字段命名                      |
-| 会话列表 | 完整 ChatSession                                           | 简化版 Session                           | 视是否由后端管理会话而定                          |
-| 系统配置 | 多模型配置 CRUD + provider 列表                            | 已对齐为 `llm-configs`                   | 继续补充前端管理与错误提示                        |
+当前后端已与前端契约对齐，各 API 行为以本文档**第一部分（契约对齐文档）**及 `backend/README.md` 为准：
+
+- **文档**：GET 列表、POST 直接文本、POST upload 多文件、DELETE 批量 `ids`，响应完整 `DocumentItem`。
+- **聊天**：POST completions / completions/stream，请求 `message` + `documents` + 可选 `sessionId`/`modelConfigId`，响应 `content`、`sessionId`、`references` 等；会话由 GET/PUT `/chat/sessions` 全量读写。
+- **系统配置**：providers、llm-configs CRUD、llm-configs/test、mineru-token GET/PUT 已实现。
 
 ---
 

@@ -8,7 +8,7 @@
 - Agent 问答页面（会话列表、消息区、输入区）
 - 系统配置页面（Provider、默认模型/参数）
 
-前端承载页面交互、状态管理和请求缓存。当前版本使用本地存储（localStorage）+ Mock 实现可独立运行；通过替换 `lib/api` 层即可对接后端 HTTP API。
+前端承载页面交互、状态管理和请求缓存。已通过 `lib/api` 对接后端 HTTP API（文档、会话、系统配置均走后端接口）。
 
 ## 2. 技术栈
 
@@ -130,10 +130,11 @@ src/
     use-document-selection.ts
     use-system-settings.ts
   lib/
-    api/                  # API 封装层
+    api/                  # API 封装层（已对接后端）
       documents.ts
       chat.ts
       chat-sessions.ts
+      system.ts
     documents-storage.ts  # 文档本地存储
     chat-sessions.ts      # 会话模型与本地持久化
     system-settings-storage.ts
@@ -174,21 +175,22 @@ src/
   - 消息区：区分用户与助手，支持多轮对话
   - 对话文档侧边栏：展示已加载 / 待加载文档，支持通过弹窗添加文档
   - 输入框：支持回车发送、提交中禁用
-- **数据层**：会话与消息当前由 `localStorage` + Mock 回答实现，后续可替换为后端 Chat API
+- **数据层**：会话与消息由后端 Chat API（`POST /api/v1/chat/completions`、`/completions/stream`）与 `GET/PUT /api/v1/chat/sessions` 提供
 
 ### 7.4 系统配置页 `/settings`
 
 - **`src/pages/settings-page.tsx`**
   - 自定义模型：Provider、Model Name、API Key
   - 模型参数：maxTokens、temperature、topP
-  - 保存与重置，`localStorage` 持久化
+  - MinerU Token（可选，用于 PDF/Word 等格式解析）
+  - 保存与重置，由后端 System API 持久化（含模型配置与 MinerU Token）
 
 ### 7.5 数据层说明
 
-| 模块       | 当前实现                                                                        | 后端对接说明                                                |
-| ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 文档管理   | `documents-storage.ts`（localStorage）                                          | 替换 `lib/api/documents.ts` 为 HTTP 请求                    |
-| 会话与消息 | `chat-sessions.ts` + `lib/api/chat.ts`（Mock）                                  | 替换 `sendChatMessage` 调用 `POST /api/v1/chat/completions` |
-| 系统配置   | `system-settings-storage.ts`（localStorage，键名：`doc-qa.system-settings.v1`） | 可选替换为 `System API` 持久化                              |
+| 模块       | 当前实现                         | 说明     |
+| ---------- | -------------------------------- | -------- |
+| 文档管理   | `lib/api/documents.ts`           | 已对接后端 Documents API |
+| 会话与消息 | `lib/api/chat.ts`、`chat-sessions.ts` | 已对接后端 Chat API 与 chat/sessions |
+| 系统配置   | `lib/api/system.ts`              | 已对接后端 System API（llm-configs、mineru-token） |
 
 通过环境变量 `VITE_API_BASE_URL` 配置后端地址，便于联调切换。

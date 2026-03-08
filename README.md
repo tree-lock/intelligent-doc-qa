@@ -85,36 +85,39 @@ flowchart LR
 
 ### 5.1 文档管理模块
 
-- **输入**：上传文件（TXT/MD）
+- **输入**：上传文件（TXT/MD）或直接提交纯文本
 - **处理**：解析文本 -> 文本切分 -> 向量化 -> 入库
-- **输出**：文档列表、文档详情、删除结果
+- **输出**：文档列表、删除结果
 - **接口**：
-  - `POST /api/v1/documents`
-  - `GET /api/v1/documents`
-  - `GET /api/v1/documents/{document_id}`
-  - `DELETE /api/v1/documents/{document_id}`
+  - `GET /api/v1/documents`（列表）
+  - `POST /api/v1/documents`（直接提交纯文本）
+  - `POST /api/v1/documents/upload`（上传文件）
+  - `DELETE /api/v1/documents`（请求体 `{ "ids": [...] }` 批量删除）
 
 ### 5.2 Agent 问答与会话模块
 
-- **输入**：用户问题、会话 ID（可选）
+- **输入**：用户问题、会话 ID（可选）、已选文档
 - **处理**：检索相关片段 -> 组装上下文 -> LLM 生成 -> 保存会话
 - **输出**：回答文本、引用片段（可选）、会话上下文
 - **接口**：
   - `POST /api/v1/chat/completions`
+  - `POST /api/v1/chat/completions/stream`（流式问答，SSE）
   - `GET /api/v1/chat/sessions`
-  - `GET /api/v1/chat/sessions/{session_id}`
+  - `PUT /api/v1/chat/sessions`
 
 ### 5.3 系统配置模块
 
-- **输入**：多个模型配置、默认模型、Provider 参数
+- **输入**：多个模型配置、默认模型、Provider 参数、MinerU Token（可选）
 - **处理**：配置校验与持久化，聊天请求按 `modelConfigId` 选模并可在同一会话内切换
 - **输出**：模型配置列表、Provider 列表、当前会话模型快照
 - **接口**：
   - `GET /api/v1/system/providers`
   - `GET /api/v1/system/llm-configs`
   - `POST /api/v1/system/llm-configs`
-  - `PUT /api/v1/system/llm-configs/{id}`
-  - `DELETE /api/v1/system/llm-configs/{id}`
+  - `PUT /api/v1/system/llm-configs/{config_id}`
+  - `DELETE /api/v1/system/llm-configs/{config_id}`
+  - `POST /api/v1/system/llm-configs/test`（模型连通性检测）
+  - `GET /api/v1/system/mineru-token`、`PUT /api/v1/system/mineru-token`（MinerU Token 查询与设置）
 
 ## 6. 前端架构（React）
 
@@ -152,29 +155,22 @@ backend/
   app/
     api/               # FastAPI routers
     schemas/           # Pydantic 请求/响应模型
-    services/          # 业务服务（文档/问答/配置）
-    providers/         # LLM Provider 适配器
+    services/          # 业务服务（文档/问答/配置）、LLM 调用（llm_gateway）、向量检索
     repositories/      # 数据访问层
     core/              # 配置、日志、异常处理
 ```
 
-### Provider 适配抽象
+### LLM 与向量检索
 
-- `ProviderAdapter` 统一接口：
-  - `chat(messages, config) -> answer`
-  - `embed(texts, config) -> vectors`
-- 具体实现：
-  - `OpenAIAdapter`
-  - `ClaudeAdapter`
-  - `LocalModelAdapter`
+- LLM 调用由 `services/llm_gateway` 统一封装（HTTP 调用 OpenAI 兼容接口与 Claude），支持 openai、claude、local、community 等 provider。
+- 向量检索使用 Chroma（`VectorStoreService`），持久化目录可配置。
 
 ## 8. 数据与存储（最小可行）
 
-- 文档元数据：`SQLite`（开发）/ `PostgreSQL`（生产）
-- 向量检索：可选 `FAISS`（本地）或 `Chroma`
-- 会话记录：`SQLite/PostgreSQL`
+- 文档元数据与会话记录：`SQLite`（开发）/ `PostgreSQL`（生产）
+- 向量检索：`Chroma`（持久化目录可配置）
 
-> 说明：开发阶段可全本地（SQLite + FAISS），部署阶段可替换为 PostgreSQL + 托管向量库。
+> 说明：开发阶段可全本地（SQLite + Chroma），部署阶段可替换为 PostgreSQL + 托管向量库。
 
 ## 9. API 分组（OpenAPI）
 
@@ -199,7 +195,7 @@ OpenAPI 文档建议：
 后端：
 
 - `APP_ENV=dev`
-- `VECTOR_STORE=faiss`
+- `chroma_persist_path`（Chroma 持久化目录，可选）
 
 前端：
 
