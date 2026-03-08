@@ -2,25 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { APP_ROUTE_PATH, getChatRoutePath } from "../app/route-config";
-import { type StreamDoneMeta, sendChatMessageStream } from "../lib/api/chat";
+import { sendChatMessageStream } from "../lib/api/chat";
 import {
   resolveCurrentChatId,
   shouldRedirectInvalidChatRoute,
 } from "../lib/chat-route";
 import {
-  type ChatSession,
   createChatId,
   createSessionTitle,
   NEW_CHAT_ID,
   sortSessionsByUpdatedAtDesc,
 } from "../lib/chat-sessions";
-import type { ChatMessage, DocumentItem } from "../types";
+import type {
+  ChatMessage,
+  ChatSession,
+  DocumentItem,
+  StreamDoneMeta,
+  StreamingAssistantMessage,
+} from "../types";
 import { useLLMConfigsQuery } from "./use-llm-configs-query";
 
-export type StreamingAssistantMessage = {
-  id: string;
-  content: string;
-};
+export type { StreamingAssistantMessage } from "../types";
 
 export function useAppChatState(
   sessions: ChatSession[],
@@ -82,9 +84,18 @@ export function useAppChatState(
   );
 
   const streamedContentRef = useRef("");
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const isOnChatRouteRef = useRef(true);
+  isOnChatRouteRef.current =
+    location.pathname === APP_ROUTE_PATH.chat ||
+    location.pathname.startsWith(`${APP_ROUTE_PATH.chat}/`);
 
   const onSendMessage = useCallback(
     async (content: string) => {
+      streamAbortRef.current?.abort();
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
       const now = new Date().toISOString();
       const selectedModel =
         currentChatId === NEW_CHAT_ID
@@ -149,7 +160,9 @@ export function useAppChatState(
           setSessions((prev) =>
             sortSessionsByUpdatedAtDesc([newSession, ...prev]),
           );
-          navigate(getChatRoutePath(newChatId));
+          if (isOnChatRouteRef.current) {
+            navigate(getChatRoutePath(newChatId));
+          }
         } else {
           const targetSessionId = meta.sessionId ?? currentChatId;
           setSessions((prev) =>
@@ -191,41 +204,58 @@ export function useAppChatState(
         setIsSendingMessage(false);
       };
 
-      await sendChatMessageStream(
-        {
-          message: content,
-          documents: currentDocuments,
-          sessionId: currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
-          modelConfigId:
-            currentChatId === NEW_CHAT_ID
-              ? draftModelConfigId
-              : currentSession?.currentModelConfigId,
-        },
-        {
-          onChunk: (delta) => {
-            streamedContentRef.current += delta;
-            setStreamingAssistantMessage((prev) =>
-              prev
-                ? { ...prev, content: prev.content + delta }
-                : { id: `m-${Date.now()}-stream`, content: delta },
-            );
+      try {
+        await sendChatMessageStream(
+          {
+            message: content,
+            documents: currentDocuments,
+            sessionId:
+              currentChatId !== NEW_CHAT_ID ? currentChatId : undefined,
+            modelConfigId:
+              currentChatId === NEW_CHAT_ID
+                ? draftModelConfigId
+                : currentSession?.currentModelConfigId,
           },
-          onDone: (meta) => {
-            const fullContent = streamedContentRef.current;
-            finishStream(fullContent, meta);
+          {
+            onChunk: (delta) => {
+              streamedContentRef.current += delta;
+              setStreamingAssistantMessage((prev) =>
+                prev
+                  ? { ...prev, content: prev.content + delta }
+                  : { id: `m-${Date.now()}-stream`, content: delta },
+              );
+            },
+            onDone: (meta) => {
+              const fullContent = streamedContentRef.current;
+              finishStream(fullContent, meta);
+            },
+            onError: (error) => {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "发送消息失败，请稍后重试";
+              toast.error(message, { duration: Infinity });
+              setOptimisticUserMessage(null);
+              setStreamingAssistantMessage(null);
+              setIsSendingMessage(false);
+            },
           },
-          onError: (error) => {
-            const message =
-              error instanceof Error
-                ? error.message
-                : "发送消息失败，请稍后重试";
-            toast.error(message, { duration: Infinity });
-            setOptimisticUserMessage(null);
-            setStreamingAssistantMessage(null);
-            setIsSendingMessage(false);
-          },
-        },
-      );
+          { signal: controller.signal },
+        );
+      } catch (err) {
+        setOptimisticUserMessage(null);
+        setStreamingAssistantMessage(null);
+        setIsSendingMessage(false);
+        const isAbort =
+          err instanceof Error && err.name === "AbortError";
+        if (!isAbort) {
+          const message =
+            err instanceof Error ? err.message : "发送消息失败，请稍后重试";
+          toast.error(message, { duration: Infinity });
+        }
+      } finally {
+        streamAbortRef.current = null;
+      }
     },
     [
       currentChatId,

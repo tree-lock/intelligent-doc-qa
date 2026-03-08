@@ -1,37 +1,16 @@
-import type { DocumentItem } from "../../types";
+import type {
+  SendChatMessagePayload,
+  SendChatMessageResult,
+  SendChatMessageStreamCallbacks,
+} from "../../types";
 import { apiFetch, buildApiUrl } from "./client";
 
-export type SendChatMessagePayload = {
-  message: string;
-  documents: DocumentItem[];
-  sessionId?: string;
-  modelConfigId?: string;
-};
-
-export type SendChatMessageResult = {
-  content: string;
-  sessionId?: string;
-  createdAt?: string;
-  references?: string[];
-  modelConfigId?: string;
-  provider?: string;
-  modelName?: string;
-};
-
-export type StreamDoneMeta = {
-  sessionId?: string;
-  createdAt?: string;
-  references?: string[];
-  modelConfigId?: string;
-  provider?: string;
-  modelName?: string;
-};
-
-export type SendChatMessageStreamCallbacks = {
-  onChunk: (content: string) => void;
-  onDone: (meta: StreamDoneMeta) => void;
-  onError: (error: Error) => void;
-};
+export type {
+  SendChatMessagePayload,
+  SendChatMessageResult,
+  SendChatMessageStreamCallbacks,
+  StreamDoneMeta,
+} from "../../types";
 
 export async function sendChatMessage(
   payload: SendChatMessagePayload,
@@ -45,17 +24,27 @@ export async function sendChatMessage(
   });
 }
 
+export type SendChatMessageStreamOptions = {
+  signal?: AbortSignal;
+};
+
 export async function sendChatMessageStream(
   payload: SendChatMessagePayload,
   callbacks: SendChatMessageStreamCallbacks,
+  options?: SendChatMessageStreamOptions,
 ): Promise<void> {
-  const response = await fetch(buildApiUrl("/api/v1/chat/completions/stream"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const { signal } = options ?? {};
+  const response = await fetch(
+    buildApiUrl("/api/v1/chat/completions/stream"),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal,
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type") ?? "";
@@ -85,8 +74,16 @@ export async function sendChatMessageStream(
 
   try {
     while (true) {
+      if (signal?.aborted) {
+        callbacks.onError(new Error("请求已取消"));
+        return;
+      }
       const { done, value } = await reader.read();
       if (done) break;
+      if (signal?.aborted) {
+        callbacks.onError(new Error("请求已取消"));
+        return;
+      }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";

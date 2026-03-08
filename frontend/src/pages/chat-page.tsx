@@ -1,11 +1,10 @@
 import { Suspense, useState } from "react";
+import { ChatDocumentSidebar } from "../components/chat/chat-document-sidebar";
 import { ChatInput } from "../components/chat/chat-input";
-import { DocumentSidebar } from "../components/chat/document-sidebar";
 import { MessageList } from "../components/chat/message-list";
 import { LoadingPanel } from "../components/ui/loading-panel";
 import { useChatInput } from "../hooks/use-chat-input";
 import { useDocumentSelection } from "../hooks/use-document-selection";
-import { useDocumentsQuery } from "../hooks/use-documents-query";
 import { useLLMConfigsQuery } from "../hooks/use-llm-configs-query";
 import { NEW_CHAT_ID } from "../lib/chat-sessions";
 import type { ChatMessage, DocumentItem } from "../types";
@@ -122,64 +121,5 @@ export function ChatPage({
         </footer>
       </section>
     </div>
-  );
-}
-
-type ChatDocumentSidebarProps = {
-  chatId: string;
-  loadedDocuments: DocumentItem[];
-  loadedDocumentIdSet: Set<string>;
-  selectedDocuments: DocumentItem[];
-  selectedDocumentIds: string[];
-  selectedCount: number;
-  isAddDialogOpen: boolean;
-  setIsAddDialogOpen: (open: boolean) => void;
-  toggleDocumentSelection: (id: string, checked: boolean) => void;
-  setSelectedDocumentIds: (
-    ids: string[] | ((prev: string[]) => string[]),
-  ) => void;
-  onPendingDocumentsChange: (documents: DocumentItem[]) => void;
-};
-
-function ChatDocumentSidebar({
-  chatId,
-  loadedDocuments,
-  loadedDocumentIdSet,
-  selectedDocuments,
-  selectedDocumentIds,
-  selectedCount,
-  isAddDialogOpen,
-  setIsAddDialogOpen,
-  toggleDocumentSelection,
-  setSelectedDocumentIds,
-  onPendingDocumentsChange,
-}: ChatDocumentSidebarProps) {
-  const { data: allDocuments } = useDocumentsQuery();
-
-  const addSelectedDocuments = () => {
-    const nextDocuments = allDocuments.filter(
-      (document) =>
-        selectedDocumentIds.includes(document.id) &&
-        !loadedDocumentIdSet.has(document.id),
-    );
-    onPendingDocumentsChange(nextDocuments);
-    setIsAddDialogOpen(false);
-  };
-
-  return (
-    <DocumentSidebar
-      chatId={chatId}
-      loadedDocuments={loadedDocuments}
-      allDocuments={allDocuments}
-      loadedDocumentIdSet={loadedDocumentIdSet}
-      selectedDocuments={selectedDocuments}
-      selectedDocumentIds={selectedDocumentIds}
-      selectedCount={selectedCount}
-      isAddDialogOpen={isAddDialogOpen}
-      onDialogOpenChange={setIsAddDialogOpen}
-      onToggle={toggleDocumentSelection}
-      onSave={addSelectedDocuments}
-      setSelectedDocumentIds={setSelectedDocumentIds}
-    />
   );
 }

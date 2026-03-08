@@ -3,17 +3,17 @@ import type {
   LLMConfigConnectivityTestInput,
   LLMConfigConnectivityTestResult,
   LLMConfigCreateInput,
+  LLMConfigListResponse,
   LLMConfigUpdateInput,
-} from "../system-settings";
+  ProviderListResponse,
+} from "../../types";
 import { apiFetch } from "./client";
 
-export type ProviderListResponse = {
-  items: string[];
-};
-
-export type LLMConfigListResponse = {
-  items: LLMConfig[];
-};
+export type {
+  LLMConfigListResponse,
+  MineruTokenStatus,
+  ProviderListResponse,
+} from "../../types";
 
 export async function fetchLLMConfigs(): Promise<LLMConfig[]> {
   const response = await apiFetch<LLMConfigListResponse>(
@@ -75,12 +75,10 @@ export async function testLLMConfigConnectivity(
   );
 }
 
-export type MineruTokenStatus = {
-  hasToken: boolean;
-};
-
-export async function fetchMineruTokenStatus(): Promise<MineruTokenStatus> {
-  return apiFetch<MineruTokenStatus>("/api/v1/system/mineru-token");
+export async function fetchMineruTokenStatus() {
+  return apiFetch<import("../../types").MineruTokenStatus>(
+    "/api/v1/system/mineru-token",
+  );
 }
 
 export async function updateMineruToken(token: string | null): Promise<void> {

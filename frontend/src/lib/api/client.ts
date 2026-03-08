@@ -1,17 +1,5 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
-
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-function getApiBaseUrl() {
-  const rawValue =
-    typeof import.meta.env.VITE_API_BASE_URL === "string" &&
-    import.meta.env.VITE_API_BASE_URL.trim()
-      ? import.meta.env.VITE_API_BASE_URL.trim()
-      : DEFAULT_API_BASE_URL;
-  return trimTrailingSlash(rawValue);
-}
+import { getApiBaseUrl } from "../../config/api";
+import { toErrorMessage } from "../../utils/error";
 
 function buildApiUrl(path: string) {
   return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
@@ -25,19 +13,6 @@ async function parseResponseBody(response: Response) {
   return response.text();
 }
 
-function toErrorMessage(payload: unknown, fallbackMessage: string) {
-  if (payload && typeof payload === "object" && "detail" in payload) {
-    const detail = payload.detail;
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
-    }
-  }
-  if (typeof payload === "string" && payload.trim()) {
-    return payload;
-  }
-  return fallbackMessage;
-}
-
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
@@ -48,17 +23,20 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  const payload = await parseResponseBody(response);
+  let payload: unknown;
   if (!response.ok) {
-    throw new Error(
-      toErrorMessage(
-        payload,
-        `请求失败：${response.status} ${response.statusText}`,
-      ),
-    );
+    try {
+      payload = await parseResponseBody(response);
+    } catch {
+      payload = null;
+    }
+    const fallback = `请求失败：${response.status} ${response.statusText}`;
+    throw new Error(toErrorMessage(payload, fallback));
   }
 
+  payload = await parseResponseBody(response);
   return payload as T;
 }
 
-export { buildApiUrl, getApiBaseUrl };
+export { getApiBaseUrl } from "../../config/api";
+export { buildApiUrl };

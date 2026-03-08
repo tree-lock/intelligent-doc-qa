@@ -1,54 +1,18 @@
-export type LLMConfig = {
-  id: string;
-  name: string;
-  provider: string;
-  apiBase: string;
-  modelName: string;
-  temperature: number;
-  topP: number;
-  maxTokens: number;
-  isDefault: boolean;
-  hasApiKey: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
+import type {
+  LLMConfig,
+  LLMConfigDraft,
+  RawLLMConfigParseResult,
+} from "../types";
 
-export type LLMConfigCreateInput = {
-  name: string;
-  provider: string;
-  apiKey?: string;
-  apiBase?: string;
-  modelName: string;
-  temperature: number;
-  topP: number;
-  maxTokens: number;
-  isDefault: boolean;
-};
-
-export type LLMConfigUpdateInput = Partial<LLMConfigCreateInput>;
-
-export type LLMConfigConnectivityTestInput = Pick<
+export type {
+  LLMConfig,
+  LLMConfigConnectivityTestInput,
+  LLMConfigConnectivityTestResult,
   LLMConfigCreateInput,
-  "provider" | "apiKey" | "apiBase" | "modelName"
-> & { configId?: string };
-
-export type LLMConfigConnectivityTestResult = {
-  ok: boolean;
-  detail: string | null;
-};
-
-export type LLMConfigDraft = {
-  name: string;
-  provider: string;
-  apiKey: string;
-  apiBase: string;
-  modelName: string;
-  temperature: number;
-  topP: number;
-  maxTokens: number;
-  isDefault: boolean;
-  hasApiKey: boolean;
-};
+  LLMConfigDraft,
+  LLMConfigUpdateInput,
+  RawLLMConfigParseResult,
+} from "../types";
 
 export const SYSTEM_SETTINGS_LIMITS = {
   temperature: { min: 0, max: 1, step: 0.1 },
@@ -80,10 +44,6 @@ type RawLLMConfigShape = {
   maxTokens?: unknown;
   isDefault?: unknown;
 };
-
-export type RawLLMConfigParseResult =
-  | { success: true; draft: LLMConfigDraft }
-  | { success: false; error: string };
 
 export function toLLMConfigDraft(config?: LLMConfig): LLMConfigDraft {
   if (!config) {

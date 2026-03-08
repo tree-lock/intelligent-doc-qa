@@ -11,23 +11,29 @@ import {
 } from "../lib/api/system";
 import {
   DEFAULT_LLM_CONFIG_DRAFT,
-  type LLMConfig,
-  type LLMConfigConnectivityTestInput,
-  type LLMConfigCreateInput,
-  type LLMConfigDraft,
-  type LLMConfigUpdateInput,
   SYSTEM_SETTINGS_LIMITS,
   toLLMConfigDraft,
 } from "../lib/system-settings";
+import type {
+  ConnectionTestStatus,
+  LLMConfig,
+  LLMConfigConnectivityTestInput,
+  LLMConfigCreateInput,
+  LLMConfigDraft,
+  LLMConfigUpdateInput,
+  SaveStatus,
+  SettingsFieldErrors,
+} from "../types";
 import { llmConfigsQueryKey } from "./use-llm-configs-query";
 
 const EMPTY_CONFIGS: LLMConfig[] = [];
 const EMPTY_PROVIDERS: string[] = [];
 
-export type SaveStatus = "idle" | "saving" | "success" | "error";
-export type ConnectionTestStatus = "idle" | "testing" | "success" | "error";
-
-export type SettingsFieldErrors = Partial<Record<keyof LLMConfigDraft, string>>;
+export type {
+  ConnectionTestStatus,
+  SaveStatus,
+  SettingsFieldErrors,
+} from "../types";
 
 const NUMBER_LABELS: Record<"temperature" | "topP" | "maxTokens", string> = {
   temperature: "Temperature",
@@ -182,7 +188,7 @@ export function useSystemSettings() {
       setSelectedConfigId(nextSelected.id);
       setDraft(toLLMConfigDraft(nextSelected));
     }
-  }, [firstProvider, selectedConfigId, isCreatingNew]);
+  }, [firstProvider, selectedConfigId, isCreatingNew, configs.length]);
 
   const createMutation = useMutation({
     mutationFn: (payload: LLMConfigCreateInput) => createLLMConfig(payload),

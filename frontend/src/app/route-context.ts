@@ -17,6 +17,12 @@ export type AppRouteContextValue = {
   onModelConfigChange: (nextModelConfigId: string) => void;
 };
 
-export function useAppRouteContext() {
-  return useOutletContext<AppRouteContextValue>();
+export function useAppRouteContext(): AppRouteContextValue {
+  const context = useOutletContext<AppRouteContextValue>();
+  if (context == null) {
+    throw new Error(
+      "useAppRouteContext 必须在挂载于 App Outlet 下的路由组件内使用。",
+    );
+  }
+  return context;
 }

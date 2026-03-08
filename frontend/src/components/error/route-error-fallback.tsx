@@ -1,17 +1,8 @@
 import { AlertCircle } from "lucide-react";
 import { useNavigate, useRouteError } from "react-router-dom";
 import { APP_ROUTE_PATH } from "../../app/route-config";
+import { getErrorMessage } from "../../utils/error";
 import { Button } from "../ui/button";
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    if (error.message === "Failed to fetch") {
-      return "无法连接服务器，请检查网络或确认后端服务已启动。";
-    }
-    return error.message;
-  }
-  return "发生未知错误，请稍后重试。";
-}
 
 export function RouteErrorFallback() {
   const error = useRouteError();

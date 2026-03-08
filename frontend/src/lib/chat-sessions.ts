@@ -1,19 +1,6 @@
-import type { ChatMessage, DocumentItem } from "../types";
+import type { ChatSession } from "../types";
 
-export type ChatSessionId = string;
-
-export type ChatSession = {
-  id: ChatSessionId;
-  title: string;
-  messages: ChatMessage[];
-  loadedDocuments: DocumentItem[];
-  pendingDocuments: DocumentItem[];
-  currentModelConfigId?: string;
-  currentProvider: string;
-  currentModelName: string;
-  createdAt: string;
-  updatedAt: string;
-};
+export type { ChatSession, ChatSessionId } from "../types";
 
 const CHAT_SESSIONS_STORAGE_KEY = "doc-qa.chat-sessions.v1";
 
