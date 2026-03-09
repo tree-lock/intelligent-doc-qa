@@ -188,7 +188,7 @@ export function useSystemSettings() {
       setSelectedConfigId(nextSelected.id);
       setDraft(toLLMConfigDraft(nextSelected));
     }
-  }, [firstProvider, selectedConfigId, isCreatingNew, configs.length]);
+  }, [firstProvider, selectedConfigId, isCreatingNew]);
 
   const createMutation = useMutation({
     mutationFn: (payload: LLMConfigCreateInput) => createLLMConfig(payload),

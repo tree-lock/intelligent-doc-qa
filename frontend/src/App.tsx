@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import type { AppRouteContextValue } from "./app/route-context";
-import { getPageTitle } from "./config/page-titles";
 import { AppShell } from "./components/layout/app-shell";
+import { getPageTitle } from "./config/page-titles";
 import { useAppChatState } from "./hooks/use-app-chat-state";
 import { useChatSessions } from "./hooks/use-chat-sessions";
 
